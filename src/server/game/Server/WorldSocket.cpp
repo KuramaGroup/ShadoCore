@@ -808,9 +808,9 @@ int WorldSocket::ProcessIncoming(WorldPacket* new_pct)
                 ACE_GUARD_RETURN(LockType, Guard, m_SessionLock, -1);
                 if (!m_Session)
                 {
-                    TC_LOG_ERROR("network.opcode", "ProcessIncoming: Client not authed opcode = %u", GetRemoteAddress().c_str(),uint32(opcode));
-                    return -1;
+                    TC_LOG_ERROR("network.opcode", "ProcessIncoming: Client not authed opcode = %u (0x%X) from %s", uint32(opcode), uint32(opcode), GetRemoteAddress().c_str());
                     CloseSocket();
+                    return -1;
                 }
 
                 // prevent invalid memory access/crash with custom opcodes
