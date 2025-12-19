@@ -36,10 +36,6 @@
 #include "ScriptMgr.h"
 #include "ChatLink.h"
 
-#ifdef ELUNA
-#include "LuaEngine.h"
-#endif
-
 bool ChatHandler::load_command_table = true;
 
 std::vector<ChatCommand> const& ChatHandler::getCommandTable()
@@ -317,10 +313,6 @@ bool ChatHandler::ExecuteCommandInTable(std::vector<ChatCommand> const& table, c
         {
             if (!ExecuteCommandInTable(table[i].ChildCommands, text, fullcmd))
             {
-#ifdef ELUNA
-                if (!sEluna->OnCommand(m_session ? m_session->GetPlayer() : NULL, oldtext))
-                    return true;
-#endif
                 if (text[0] != '\0')
                     SendSysMessage(LANG_NO_SUBCMD);
                 else
@@ -466,10 +458,6 @@ bool ChatHandler::ParseCommands(char const* text)
 
     if (!ExecuteCommandInTable(getCommandTable(), text, fullcmd))
     {
-#ifdef ELUNA
-        if (!sEluna->OnCommand(m_session ? m_session->GetPlayer() : NULL, text))
-            return true;
-#endif
         if (m_session && m_session->GetSecurity() == SEC_PLAYER)
             return false;
 

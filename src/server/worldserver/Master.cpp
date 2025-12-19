@@ -66,10 +66,6 @@ extern int m_ServiceStatus;
 #define PROCESS_HIGH_PRIORITY -15 // [-20, 19], default is 0
 #endif
 
-#ifdef ELUNA
-#include "LuaEngine.h"
-#endif
-
 /// Handle worldservers's termination signals
 class WorldServerSignalHandler : public Trinity::SignalHandler
 {
@@ -357,10 +353,6 @@ int Master::Run()
     // since worldrunnable uses them, it will crash if unloaded after master
     worldThread.wait();
     rarThread.wait();
-
-#ifdef ELUNA
-    Eluna::Uninitialize();
-#endif
 
     // set server offline
     LoginDatabase.DirectPExecute("UPDATE realmlist SET flag = flag | %u WHERE id = '%d'", REALM_FLAG_OFFLINE, realmID);
