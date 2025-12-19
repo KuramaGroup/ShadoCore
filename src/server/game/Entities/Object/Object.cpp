@@ -55,11 +55,6 @@
 #include "timeless_isle.h"
 #include <ace/Stack_Trace.h>
 
-#ifdef ELUNA
-#include "LuaEngine.h"
-#include "ElunaEventMgr.h"
-#endif
-
 #define STEALTH_VISIBILITY_UPDATE_TIMER 500
 
 uint32 GuidHigh2TypeId(uint32 guid_hi)
@@ -98,10 +93,6 @@ Object::Object() : m_PackGUID(sizeof(uint64)+1)
 
 WorldObject::~WorldObject()
 {
-#ifdef ELUNA
-    delete elunaEvents;
-    elunaEvents = NULL;
-#endif
     // this may happen because there are many !create/delete
     if (IsWorldObject() && m_currMap)
     {
@@ -1381,9 +1372,6 @@ void MovementInfo::OutDebug()
 }
 
 WorldObject::WorldObject(bool isWorldObject): WorldLocation(),
-#ifdef ELUNA
-elunaEvents(NULL),
-#endif
 m_name(""), m_isActive(false), m_isWorldObject(isWorldObject), m_zoneScript(NULL),
 m_transport(NULL), m_currMap(NULL), m_InstanceId(0),
 m_phaseMask(PHASEMASK_NORMAL), m_explicitSeerGuid(),
@@ -2593,12 +2581,6 @@ void WorldObject::SetMap(Map* map)
     m_mapId = map->GetId();
     m_InstanceId = map->GetInstanceId();
 
-#ifdef ELUNA
-    delete elunaEvents;
-    // On multithread replace this with a pointer to map's Eluna pointer stored in a map
-    elunaEvents = new ElunaEventProcessor(&Eluna::GEluna, this);
-#endif
-
     if (IsWorldObject())
         m_currMap->AddWorldObject(this);
 }
@@ -2609,11 +2591,6 @@ void WorldObject::ResetMap()
     ASSERT(!IsInWorld());
     if (IsWorldObject())
         m_currMap->RemoveWorldObject(this);
-
-#ifdef ELUNA
-    delete elunaEvents;
-    elunaEvents = NULL;
-#endif
 
     m_currMap = NULL;
     //maybe not for corpse
@@ -3666,10 +3643,6 @@ void WorldObject::BuildUpdate(UpdateDataMapType& data_map, const uint32 diff)
     Map& map = *GetMap();
     //we must build packets for all visible players
     cell.Visit(p, player_notifier, map, *this, GetVisibilityRange() + 2 * World::Visibility_RelocationLowerLimit, true);
-
-#ifdef ELUNA
-    elunaEvents->Update(diff);
-#endif
 
     ClearUpdateMask(false);
 }
