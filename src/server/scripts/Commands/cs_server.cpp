@@ -124,7 +124,7 @@ public:
         if (maxActiveClientsNum > sWorld->getIntConfig(CONFIG_MAX_ICORE))
             maxActiveClientsNum = (maxActiveClientsNum * sWorld->getRate(RATE_MAX_MODW));
 
-        handler->PSendSysMessage("-=Project=- " REV_DATE " |cffff0000 Update Pack 3 (11.06.2019)");
+        //handler->PSendSysMessage("-=Project=- " REV_DATE " |cffff0000 Update Pack 3 (11.06.2019)");
         handler->PSendSysMessage(LANG_CONNECTED_USERS, playersNum, maxActiveClientsNum, queuedClientsNum, maxQueuedClientsNum);
         handler->PSendSysMessage(LANG_UPTIME, uptime.c_str());
 
@@ -132,12 +132,12 @@ public:
         if (sWorld->IsShuttingDown())
             handler->PSendSysMessage(LANG_SHUTDOWN_TIMELEFT, secsToTimeString(sWorld->GetShutDownTimeLeft()).c_str());
 
-        if (updateTime > 500)
+        /*if (updateTime > 500)
             handler->PSendSysMessage(LANG_DIFF_POOR, updateTime);
         else if (updateTime > 200)
             handler->PSendSysMessage(LANG_DIFF_NORMAL, updateTime);
         else
-            handler->PSendSysMessage(LANG_DIFF_GOOD, updateTime);
+            handler->PSendSysMessage(LANG_DIFF_GOOD, updateTime);*/
 
         if (handler->GetSession())
             for (auto&& bonusRate : sWorld->GetBonusRates())
