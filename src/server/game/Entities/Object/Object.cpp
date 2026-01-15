@@ -2100,6 +2100,25 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool ignoreStealth, boo
     if (obj->IsAlwaysVisibleFor(this) || CanAlwaysSee(obj))
         return true;
 
+    // Creature scripts
+    if (Creature const* cObj = obj->ToCreature())
+    {
+        if (Player const* player = this->ToPlayer())
+        {
+            if (cObj->IsAIEnabled && !cObj->AI()->CanBeSeen(player))
+            {
+                return false;
+            }
+
+            ConditionList conditions = sConditionMgr->GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_CREATURE_VISIBILITY, cObj->GetEntry());
+
+            if (!sConditionMgr->IsObjectMeetToConditions((WorldObject*)this, conditions))
+            {
+                return false;
+            }
+        }
+    }
+
     bool corpseVisibility = false;
     if (distanceCheck)
     {

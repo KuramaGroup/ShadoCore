@@ -153,7 +153,8 @@ enum ConditionSourceType
     CONDITION_SOURCE_TYPE_PHASE_DEFINITION               = 25, // only 4.3.4
     // Condition source type 26 unused
     CONDITION_SOURCE_TYPE_GRAVEYARD                      = 27,
-    CONDITION_SOURCE_TYPE_MAX                            = 28  // MAX
+    CONDITION_SOURCE_TYPE_CREATURE_VISIBILITY            = 30,
+    CONDITION_SOURCE_TYPE_MAX                            = 31  // MAX
 };
 
 enum RelationType
