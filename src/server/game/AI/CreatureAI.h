@@ -160,6 +160,8 @@ class CreatureAI : public UnitAI
         // Called when owner attacks something
         virtual void OwnerAttacked(Unit* /*target*/) { }
 
+        virtual bool CanBeSeen(Player const* /*seer*/) { return true; }
+
         /// == Triggered Actions Requested ==================
 
         // Called when creature attack expected (if creature can and no have current victim)
