@@ -1180,6 +1180,289 @@ private:
     bool half_hp_reached_once = false;
 };
 
+enum ForsakenBat
+{
+    TALK_BAT_ARRIVED_TO_ISLE = 0,
+    TALK_BAT_GOING_HOME = 1,
+
+    SPELL_BLIGHT_CONCOCTION = 83573,
+
+    SPELL_GO_HOME = 83594,
+    QUEST_ITERATING_UPON_SUCCESS = 26998,
+    NPC_BAT_HANDLER_MAGGOTBREATH = 44825,
+    NPC_FORSAKEN_BAT = 44821,
+
+    ACTION_GO_HOME = 1,
+
+    NPC_VILE_FIN_ORACLE = 1908,
+
+    DATA_ITERATING_UPON_SUCCESS_REQ = 50
+};
+
+enum BatStages
+{
+    STAGE_ARRIVE = 0,
+    STAGE_CIRCLE = 1,
+    STAGE_GO_HOME = 2
+};
+
+enum BatPoints
+{
+    POINT_CIRCLE_END,
+    POINT_HOME_END
+};
+
+enum BatEvents
+{
+    EVENT_CHECK_QUEST_DONE
+};
+
+enum BatFlightPoints
+{
+    POINT_ARRIVE_ISLE = 0,
+    POINT_HOME = 1,
+    POINT_FLIGHT_0 = 2000
+};
+
+static const Position FlightPath[] =
+{
+    {1214.8f,   414.792f,  61.0968f},
+    {1221.35f,  323.231f,  61.0968f},
+    {1189.93f,  281.372f,  61.0968f},
+    {1100.24f,  212.868f,  61.0968f},
+    {1015.84f,  188.21f,   63.0412f},
+    {939.417f,  163.743f,  61.0968f},
+    {874.302f,  114.092f,  61.0968f},
+    {831.491f,  59.3177f,  56.5968f},
+    {770.872f,  70.7726f,  56.5968f},
+    {759.814f,  109.738f,  56.5968f},
+    {803.745f,  181.882f,  56.5968f},
+    {840.674f,  202.097f,  56.5968f},
+    {846.651f,  232.344f,  56.5968f},
+    {805.031f,  261.606f,  59.9579f},
+    {759.528f,  265.283f,  59.9579f},
+    {693.755f,  282.512f,  59.9579f},
+    {658.036f,  357.233f,  59.9579f},
+    {639.776f,  433.974f,  59.9579f},
+    {676.128f,  470.752f,  59.9579f},
+    {706.495f,  454.023f,  59.9579f},
+    {713.505f,  380.88f,   59.9579f},
+    {726.146f,  352.188f,  59.9579f},
+    {758.299f,  321.101f,  59.9579f},
+    {797.684f,  295.753f,  58.1801f},
+    {882.036f,  252.597f,  52.1245f},
+    {929.667f,  225.609f,  52.1245f},
+    {987.259f,  219.582f,  52.1245f},
+    {1030.56f,  276.193f,  52.1245f},
+    {1058.35f,  308.229f,  49.3745f},
+    {1121.81f,  372.755f,  56.4579f},
+    {1167.09f,  438.865f,  58.4857f},
+    {1197.37f,  451.757f,  64.569f},
+    {1205.51f,  425.464f,  62.9479f},
+    {931.068f,  352.101f,  81.027f},
+    {952.535f,  571.493f,  108.303f},
+    {970.028f,  664.392f,  110.83f},
+    {1031.97f,  754.155f,  111.441f},
+    {1234.44f,  880.16f,  97.9414f},
+    {1345.66f,  970.281f,  75.1914f},
+    {1415.9f,   1018.08f,  55.3025f},
+    {1374.36f,  1029.12f,  67.8815f},
+    {1289.08f,  1013.22f,  67.8815f},
+    {1224.0f,   997.236f,  59.9371f},
+    {1178.72f,  957.238f,  47.2426f},
+    {1156.5f,   852.318f,  35.7704f},
+    {1158.1f,   725.983f,  35.7704f},
+    {1187.67f,  575.212f,  35.7704f},
+    {1202.33f,  472.97f,   65.4648f}
+};
+static constexpr uint32 FLIGHT_POINT_COUNT = 48;
+
+static const Position HomePos = { 1214.8f, 414.792f, 61.0968f };
+
+// Forsaken Bat - 44821
+struct npc_silverpine_forsaken_bat : public VehicleAI
+{
+    npc_silverpine_forsaken_bat(Creature* creature) : VehicleAI(creature) { Initialize(); }
+
+    void Initialize()
+    {
+        SetupInitialActionBar();
+        _stage = STAGE_ARRIVE;
+        me->SetCanFly(true);
+        me->SetDisableGravity(true);
+    }
+
+    void StartCircleWaypoint()
+    {
+        std::vector<Position> wp;
+        wp.reserve(FLIGHT_POINT_COUNT + 1);
+
+        for (uint32 i = 0; i < FLIGHT_POINT_COUNT; ++i)
+        {
+            Position p = FlightPath[i];
+            p.m_positionZ += 5.0f;
+            wp.push_back(p);
+        }
+        wp.push_back(wp.front());
+
+        me->GetMotionMaster()->Clear();
+        me->GetMotionMaster()->MoveSplinePath(wp.data(), uint32(wp.size()), true, false, 0.0f, true);
+    }
+
+    void MoveToNextCirclePoint()
+    {
+        if (_stage == STAGE_GO_HOME)
+            return;
+        if (_flightIndex >= FLIGHT_POINT_COUNT)
+            _flightIndex = 0;
+
+        me->GetMotionMaster()->Clear();
+        me->GetMotionMaster()->MovePoint(POINT_FLIGHT_0 + _flightIndex, FlightPath[_flightIndex], false);
+        _curPathIndex = _flightIndex;
+        ++_flightIndex;
+    }
+
+    void PassengerBoarded(Unit* passenger, int8 /*seat*/, bool apply) override
+    {
+        if (apply)
+        {
+            if (Player* player = passenger->ToPlayer())
+            {
+                _playerGUID = player->GetGUID();
+                if (player->GetQuestStatus(QUEST_ITERATING_UPON_SUCCESS) == QUEST_STATUS_INCOMPLETE)
+                {
+                    player->KilledMonsterCredit(NPC_BAT_HANDLER_MAGGOTBREATH);
+                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                    me->GetMotionMaster()->MovePoint(POINT_ARRIVE_ISLE, 1195.644f, 456.1104f, 93.333f, false);
+                    _events.ScheduleEvent(EVENT_CHECK_QUEST_DONE, 500ms);
+                }
+            }
+        }
+        else
+        {
+            if (passenger->GetTypeId() == TYPEID_PLAYER && _stage != STAGE_GO_HOME)
+                DoAction(ACTION_GO_HOME);
+        }
+    }
+
+    void MovementInform(uint32 type, uint32 id) override
+    {
+        MoveToNextCirclePoint();
+        if (type != POINT_MOTION_TYPE)
+            return;
+
+        if (_stage == STAGE_GO_HOME && id != POINT_HOME_END)
+            return;
+
+        switch (id)
+        {
+        case POINT_ARRIVE_ISLE:
+            _flightIndex = 0;
+            if (Player* player = ObjectAccessor::GetPlayer(*me, _playerGUID))
+            {
+                Talk(TALK_BAT_ARRIVED_TO_ISLE, player);
+                player->VehicleSpellInitialize();
+            }
+            StartCircleWaypoint();
+            _events.ScheduleEvent(EVENT_CHECK_QUEST_DONE, 500ms);
+            break;
+
+        case POINT_HOME_END:
+            if (me->GetVehicleKit())
+                me->GetVehicleKit()->RemoveAllPassengers();
+            me->DespawnOrUnsummon();
+            break;
+        }
+
+        if (id >= POINT_FLIGHT_0 && id < POINT_FLIGHT_0 + FLIGHT_POINT_COUNT)
+            MoveToNextCirclePoint();
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        VehicleAI::UpdateAI(diff);
+        _events.Update(diff);
+
+        while (uint32 eventId = _events.ExecuteEvent())
+        {
+            switch (eventId)
+            {
+            case EVENT_CHECK_QUEST_DONE:
+            {
+                if (Player* player = ObjectAccessor::GetPlayer(*me, _playerGUID))
+                {
+                    if (player->GetReqKillOrCastCurrentCount(QUEST_ITERATING_UPON_SUCCESS, NPC_VILE_FIN_ORACLE) >= DATA_ITERATING_UPON_SUCCESS_REQ)
+                    {
+                        player->CastSpell(me, SPELL_GO_HOME, true);
+                        return;
+                    }
+                }
+                _events.ScheduleEvent(EVENT_CHECK_QUEST_DONE, 500ms);
+                break;
+            }
+            }
+        }
+    }
+
+    void DoAction(int32 param) override
+    {
+        if (param == ACTION_GO_HOME && _stage != STAGE_GO_HOME)
+        {
+            if (Player* player = ObjectAccessor::GetPlayer(*me, _playerGUID))
+            {
+                _stage = STAGE_GO_HOME;
+                _events.CancelEvent(EVENT_CHECK_QUEST_DONE);
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MovePoint(POINT_HOME_END, 1415.9f, 1018.08f, 55.3025f, false);
+                SetupFinishActionBar();
+                player->VehicleSpellInitialize();
+                Talk(TALK_BAT_GOING_HOME, player);
+            }
+        }
+    }
+
+    void SetupInitialActionBar() { me->m_spells[0] = SPELL_BLIGHT_CONCOCTION; me->m_spells[1] = 0; }
+    void SetupFinishActionBar() { me->m_spells[0] = 0; me->m_spells[1] = 0; }
+
+private:
+    EventMap _events;
+    ObjectGuid _playerGUID;
+    uint8 _stage;
+    uint8 _flightIndex = 0;
+    uint8  _curPathIndex = 0;
+};
+
+// Go Home - 83594
+class spell_silverpine_go_home : public SpellScriptLoader
+{
+public:
+    spell_silverpine_go_home() : SpellScriptLoader("spell_silverpine_go_home") { }
+
+    class spell_silverpine_go_home_SpellScript : public SpellScript
+    {
+        PrepareSpellScript(spell_silverpine_go_home_SpellScript);
+
+        void HandleDummyEffect(SpellEffIndex /*effIndex*/)
+        {
+            Unit* caster = GetCaster();
+            Unit* hit = GetHitUnit();
+            if (!caster || !hit) return;
+
+            if (caster->GetTypeId() == TYPEID_PLAYER && hit->GetEntry() == NPC_FORSAKEN_BAT && hit->IsAIEnabled)
+                hit->GetAI()->DoAction(ACTION_GO_HOME);
+        }
+
+        void Register() override
+        {
+            OnEffectHitTarget += SpellEffectFn(spell_silverpine_go_home_SpellScript::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        }
+    };
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_silverpine_go_home_SpellScript();
+    }
+};
+
 /*######
 ## AddSC
 ######*/
@@ -1193,4 +1476,6 @@ void AddSC_silverpine_forest()
     new creature_script<npc_silverpine_fallen_human>("npc_silverpine_fallen_human");
     new spell_silverpine_forsaken_trooper_masterscript_high_command();
     new spell_silverpine_raise_forsaken();
+    new spell_silverpine_go_home();
+    new creature_script<npc_silverpine_forsaken_bat>("npc_silverpine_forsaken_bat");
 }
