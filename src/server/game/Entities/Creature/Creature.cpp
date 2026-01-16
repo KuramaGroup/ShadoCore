@@ -607,6 +607,48 @@ void Creature::Update(uint32 diff)
             break;
     }
 
+    if (IsAlive() && IsInCombat() && GetVictim() && !IsPet() && !IsSummon())
+    {
+        Map* map = GetMap();
+        if (map && !map->IsDungeon() && !map->IsRaid())
+        {
+            bool canMelee = IsWithinMeleeRange(GetVictim(), 0.0f);
+
+            bool isBusy = HasUnitState(UNIT_STATE_CASTING | UNIT_STATE_STUNNED |
+                UNIT_STATE_CONFUSED | UNIT_STATE_FLEEING |
+                UNIT_STATE_DISTRACTED | UNIT_STATE_ROOT);
+
+            bool canSee = !canMelee && IsWithinDistInMap(GetVictim(), 40.0f) && IsWithinLOSInMap(GetVictim());
+
+            if (canMelee || isBusy || canSee)
+                m_noMeleeContactTimer = 0;
+            else
+            {
+                m_noMeleeContactTimer += diff;
+                if (m_noMeleeContactTimer >= 8000)
+                {
+                    m_noMeleeContactTimer = 0;
+                    AI()->EnterEvadeMode();
+                    return;
+                }
+            }
+
+            if (isBusy)
+                m_noDamageDealtTimer = 0;
+            else
+            {
+                m_noDamageDealtTimer += diff;
+                if (m_noDamageDealtTimer >= 8000)
+                {
+                    m_noDamageDealtTimer = 0;
+                    m_noMeleeContactTimer = 0;
+                    AI()->EnterEvadeMode();
+                    return;
+                }
+            }
+        }
+    }
+
     sScriptMgr->OnCreatureUpdate(this, diff);
 }
 

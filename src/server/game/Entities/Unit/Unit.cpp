@@ -1112,6 +1112,12 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
 
     TC_LOG_DEBUG("entities.unit", "DealDamageEnd returned %d damage", damage);
 
+    if (Creature* creature = ToCreature())
+    {
+        if (damage > 0)
+            creature->m_noDamageDealtTimer = 0;
+    }
+
     return damage;
 }
 
