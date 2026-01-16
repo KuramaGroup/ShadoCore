@@ -1705,6 +1705,346 @@ public:
     }
 };
 
+class npc_camera_waiting : public CreatureScript
+{
+public:
+    npc_camera_waiting() : CreatureScript("npc_camera_waiting") { }
+
+    CreatureAI* GetAI(Creature* pCreature) const override
+    {
+        return new npc_camera_waitingAI(pCreature);
+    }
+
+    struct npc_camera_waitingAI : public ScriptedAI
+    {
+        npc_camera_waitingAI(Creature* c) : ScriptedAI(c) { }
+
+        bool Cinematic;
+        bool bSummoned;
+        bool bSummoned2;
+        uint8 Phase;
+        uint32 CinematicTimer;
+        uint64 DariusGUID;
+        uint64 IvarGUID;
+        uint64 TraitorGUID;
+        uint64 PlayerGUID;
+
+        void Reset() override
+        {
+            CinematicTimer = 5000;
+            Cinematic = false;
+            Phase = 0;
+            DariusGUID = 0;
+            IvarGUID = 0;
+            TraitorGUID = 0;
+            bSummoned = false;
+            bSummoned2 = false;
+        }
+
+        void PassengerBoarded(Unit* who, int8 /*seatId*/, bool apply) override
+        {
+            if (who->GetTypeId() == TYPEID_PLAYER)
+            {
+                if (apply)
+                {
+                    me->NearTeleportTo(1314.926880f, 1210.922729f, 58.504990f, 0.0f);
+                    PlayerGUID = who->GetGUID();
+
+                    Cinematic = true;
+                }
+
+                if (!apply)
+                {
+                    if (Creature* Darius = me->GetMap()->GetCreature(DariusGUID))
+                        if (Creature* Ivar = me->GetMap()->GetCreature(IvarGUID))
+                        {
+                            Darius->DespawnOrUnsummon(1);
+                            Ivar->DespawnOrUnsummon(1);
+                        }
+
+                    if (Creature* Traitor = me->GetMap()->GetCreature(TraitorGUID))
+                    {
+                        Traitor->DespawnOrUnsummon(1);
+                    }
+                }
+            }
+        }
+
+        void SummonWorgens()
+        {
+            if (!bSummoned)
+            {
+                if (Creature* Ivar = me->SummonCreature(44884, 1302.08f, 1206.31f, 58.49f, 6.25f, TEMPSUMMON_MANUAL_DESPAWN, 0))
+                    if (Creature* Darius = me->SummonCreature(44883, 1302.08f, 1206.31f, 58.49f, 6.25f, TEMPSUMMON_MANUAL_DESPAWN, 0))
+                    {
+                        DariusGUID = Darius->GetGUID();
+                        IvarGUID = Ivar->GetGUID();
+                        Darius->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, PlayerGUID);
+                        Ivar->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, PlayerGUID);
+
+                        Darius->GetMotionMaster()->MovePoint(0, 1313.26f, 1206.01f, 58.51f);
+                        Ivar->GetMotionMaster()->MovePoint(1, 1308.82f, 1206.14f, 58.51f);
+                        bSummoned = true;
+                    }
+            }
+        }
+
+        void SummonTraitor()
+        {
+            if (!bSummoned2)
+            {
+                if (Creature* Traitor = me->SummonCreature(79999, 1313.72f, 1212.17f, 58.49f, 4.68f, TEMPSUMMON_MANUAL_DESPAWN, 0))
+                {
+                    TraitorGUID = Traitor->GetGUID();
+                    Traitor->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, PlayerGUID);
+                    bSummoned2 = true;
+                }
+            }
+        }
+
+        void DespawnTraitor()
+        {
+            std::list<Creature*> pCreatureList;
+            Trinity::AllCreaturesOfEntryInRange checker(me, 44882, 20);
+            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(me, pCreatureList, checker);
+            me->VisitNearbyObject(20, searcher);
+
+            for (std::list<Creature*>::iterator iter = pCreatureList.begin(); iter != pCreatureList.end(); ++iter)
+            {
+                if (Unit* summoner = (*iter)->GetTempSummoner())
+                {
+                    ObjectGuid pguid = summoner->GetGUID();
+                    if (PlayerGUID == pguid)
+                    {
+                        (*iter)->DespawnOrUnsummon(1);
+                        break;
+                    }
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (Cinematic)
+            {
+                SummonWorgens();
+
+                if (CinematicTimer <= diff)
+                {
+                    if (Creature* Darius = me->GetMap()->GetCreature(DariusGUID))
+                        if (Creature* Ivar = me->GetMap()->GetCreature(IvarGUID))
+                        {
+                            switch (Phase)
+                            {
+                            case 0: Darius->SetFacingTo(3.05f); me->SetFacingTo(5.6f); CinematicTimer = 5000; ++Phase; break;
+                            case 1: DespawnTraitor(); SummonTraitor(); Darius->AI()->Talk(0); CinematicTimer = 7000; ++Phase; break;
+                            case 2: me->SetFacingTo(5.4f); Ivar->AI()->Talk(0); CinematicTimer = 9000; ++Phase; break;
+                            case 3: me->SetFacingTo(5.6f); Darius->AI()->Talk(1); CinematicTimer = 8000; ++Phase; break;
+                            case 4: Darius->AI()->Talk(2); CinematicTimer = 9000; ++Phase; break;
+                            case 5: me->SetFacingTo(5.4f); Ivar->AI()->Talk(1); CinematicTimer = 4000; ++Phase; break;
+                            case 6: Ivar->AI()->Talk(2); CinematicTimer = 2000; ++Phase; break;
+                            case 7: Ivar->AI()->Talk(3); CinematicTimer = 7000; ++Phase; break;
+                            case 8: me->SetFacingTo(5.6f); Darius->AI()->Talk(3); CinematicTimer = 6000; ++Phase; break;
+                            case 9: me->SetFacingTo(5.4f); Ivar->AI()->Talk(4); CinematicTimer = 5000; ++Phase; break;
+                            case 10: Ivar->GetMotionMaster()->MovePoint(0, 1311.8f, 1208.56f, 58.51f); CinematicTimer = 2500; Phase = 23; break;
+                            case 23: Ivar->AI()->Talk(5); CinematicTimer = 4000; Phase = 11; break;
+                            case 11: Ivar->AI()->Talk(6); CinematicTimer = 6000; ++Phase; break;
+                            case 12: Ivar->AI()->Talk(7); CinematicTimer = 4000; ++Phase; break;
+                            case 13:
+                            {
+                                if (Creature* Traitor = me->FindNearestCreature(79999, 20.0f, true))
+                                {
+                                    Traitor->EnterVehicle(Ivar, 0);
+                                    TraitorGUID = Traitor->GetGUID();
+                                }
+                                CinematicTimer = 1500;
+                                ++Phase;
+                                break;
+                            }
+                            case 14:
+                            {
+                                Ivar->GetMotionMaster()->MovePoint(2, 1310.82f, 1206.05f, 58.51f);
+                                CinematicTimer = 2500;
+                                ++Phase;
+                                break;
+                            }
+                            case 15: Ivar->SetFacingTo(3.06f); Ivar->AI()->Talk(8); CinematicTimer = 4000; ++Phase; break;
+                            case 16:
+                            {
+                                if (Creature* Traitor = me->GetMap()->GetCreature(TraitorGUID))
+                                {
+                                    Traitor->AI()->Talk(2);
+                                }
+                                CinematicTimer = 6000;
+                                ++Phase;
+                            }break;
+                            case 17:
+                            {
+                                if (Creature* Traitor = me->GetMap()->GetCreature(TraitorGUID))
+                                {
+                                    Ivar->AI()->Talk(9);
+                                    Traitor->ExitVehicle();
+                                    Traitor->Kill(Traitor, false);
+                                    Traitor->DespawnOrUnsummon(5000);
+                                }
+                                CinematicTimer = 3000;
+                                ++Phase;
+                            }break;
+                            case 18:
+                            {
+                                Ivar->SetFacingToObject(Darius);
+                                Ivar->AI()->Talk(10);
+                                Ivar->HandleEmoteCommand(66);
+                                CinematicTimer = 7000;
+                                ++Phase;
+                            }break;
+                            case 19: Ivar->GetMotionMaster()->MovePoint(3, 1298.61f, 1206.63f, 58.58f); CinematicTimer = 3000; ++Phase; break;
+                            case 20: Darius->GetMotionMaster()->MovePoint(4, 1305.43f, 1206.1f, 58.5f); CinematicTimer = 3000; ++Phase; break;
+                            case 21:
+                            {
+                                if (Player* player = me->GetMap()->GetPlayer(PlayerGUID))
+                                    player->KilledMonsterCredit(44882);
+
+                                CinematicTimer = 1000;
+                                ++Phase;
+                            }break;
+                            case 22:
+                            {
+                                Ivar->DespawnOrUnsummon(1);
+                                Darius->DespawnOrUnsummon(1);
+                                if (Creature* Traitor = me->GetMap()->GetCreature(TraitorGUID))
+                                {
+                                    Traitor->DespawnOrUnsummon(1);
+                                }
+                                me->DespawnOrUnsummon(1);
+                                return;
+                            }
+                            default: break;
+                            }
+                        }
+
+                }
+                else CinematicTimer -= diff;
+            }
+        }
+    };
+};
+
+class npc_armoire : public CreatureScript
+{
+public:
+
+    npc_armoire() : CreatureScript("npc_armoire") { }
+
+    CreatureAI* GetAI(Creature* pCreature) const override
+    {
+        return new npc_armoireAI(pCreature);
+    }
+
+    struct npc_armoireAI : public ScriptedAI
+    {
+        npc_armoireAI(Creature* pCreature) : ScriptedAI(pCreature) { }
+
+        uint32 CameraTimer;
+
+        void Reset() override
+        {
+            CameraTimer = 3000;
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (CameraTimer <= diff)
+            {
+                CameraTimer = 1000;
+                if (Creature* Camera = me->FindNearestCreature(44893, 10.0f, true))
+                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                else
+                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+            }
+            else CameraTimer -= diff;
+        }
+    };
+};
+
+class npc_deathstalker_rane_yorick : public CreatureScript
+{
+public:
+    npc_deathstalker_rane_yorick() : CreatureScript("npc_deathstalker_rane_yorick") { }
+
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_deathstalker_rane_yorickAI(creature);
+    }
+
+    struct npc_deathstalker_rane_yorickAI : public ScriptedAI
+    {
+        npc_deathstalker_rane_yorickAI(Creature* c) : ScriptedAI(c) { }
+
+        ObjectGuid summonerGUID;
+        ObjectGuid PlayerGUID;
+        uint32 Timer;
+        bool powiedz;
+
+        void Reset() override
+        {
+            if (Unit* summoner = me->GetTempSummoner())
+            {
+                PlayerGUID = summoner->GetGUID();
+                me->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, PlayerGUID);
+                Timer = 500;
+                powiedz = true;
+            }
+        }
+
+        void MovementInform(uint32 type, uint32 id) override
+        {
+            if (type == WAYPOINT_MOTION_TYPE && id == 13)
+                Talk(1);
+
+            if (type == WAYPOINT_MOTION_TYPE && id == 14)
+            {
+                me->SetFacingTo(4.6f);
+                me->CastSpell(me, 34189, true);
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (Timer <= diff)
+            {
+                if (powiedz == true)
+                {
+                    powiedz = false;
+                    me->GetMotionMaster()->MovePath(44882, false);
+                    Talk(0);
+                    Timer = 50000;
+                }
+            }
+            else
+                Timer -= diff;
+        }
+    };
+};
+
+class gobj_abandoned_outhouse : public GameObjectScript
+{
+public:
+    gobj_abandoned_outhouse() : GameObjectScript("gobj_abandoned_outhouse") { }
+
+    bool OnQuestAccept(Player* player, GameObject* /*go*/, Quest const* quest)
+    {
+        if (quest->GetQuestId() == 27045)
+            if (Creature* yorick = player->FindNearestCreature(44882, 50.0f))
+                yorick->UnsummonAllTotems();
+            else
+                player->SummonCreature(44882, 1300.516479f, 1189.810791f, 52.124302f, 2.57038f, TEMPSUMMON_MANUAL_DESPAWN, 0);
+
+        return true;
+    }
+};
+
 /*######
 ## AddSC
 ######*/
@@ -1722,4 +2062,8 @@ void AddSC_silverpine_forest()
     new creature_script<npc_silverpine_forsaken_bat>("npc_silverpine_forsaken_bat");
     new npc_agatha_44951();
     new npc_hillsbrad_refugee_44966();
+    new npc_camera_waiting();
+    new npc_armoire();
+    new npc_deathstalker_rane_yorick();
+    new gobj_abandoned_outhouse();
 }
