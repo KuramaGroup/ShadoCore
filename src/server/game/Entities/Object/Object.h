@@ -96,6 +96,17 @@ enum PhaseMasks
     PHASEMASK_ANYWHERE = 0xFFFFFFFF
 };
 
+enum SpecialVisibility
+{
+    SPECIAL_VISIBILITY_NONE = 0,
+    SPECIAL_VISIBILITY_PLAYER = 1,
+    SPECIAL_VISIBILITY_GROUP = 2,
+    SPECIAL_VISIBILITY_KILLER = 3,
+    SPECIAL_VISIBILITY_FRIENDLY = 4,
+    SPECIAL_VISIBILITY_UNFRIENDLY = 5,
+    SPECIAL_VISIBILITY_CREATURES_AND_OWNER = 6
+};
+
 enum NotifyFlags
 {
     NOTIFY_NONE                     = 0x00,
@@ -743,6 +754,9 @@ class WorldObject : public Object, public WorldLocation
         bool InSamePhase(WorldObject const* obj) const;
         bool InSamePhase(uint32 phasemask) const { return (GetPhaseMask() & phasemask); }
 
+        SpecialVisibility GetSpecialInvisibility() { return m_specialVisibilityType; }
+        void SetSpecialInvisibility(SpecialVisibility type, uint64 guid);
+
         uint32 GetZoneId() const;
         uint32 GetAreaId() const;
         void GetZoneAndAreaId(uint32& zoneid, uint32& areaid) const;
@@ -963,6 +977,10 @@ class WorldObject : public Object, public WorldLocation
         uint32 m_InstanceId;                                // in map copy with instance id
         uint32 m_phaseMask;                                 // in area phase state
 
+        // Special Visibility
+        SpecialVisibility   m_specialVisibilityType;
+        uint64          m_specialVisibilityGUID;
+
         bool m_hasCustomVisibility = false;
         float m_customVisibilityDistance = 0;
         bool m_customVisibilityZoneOnly = false;
@@ -978,6 +996,8 @@ class WorldObject : public Object, public WorldLocation
 
         uint64 m_explicitSeerGuid;
         TimeTrackerSmall m_stealthVisibilityUpdateTimer;
+    public:
+        bool CanDetectSpecialVisibility(WorldObject const* obj) const;
 };
 
 inline int32 Object::GetInt32Value(uint16 index) const

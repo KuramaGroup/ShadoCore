@@ -1373,7 +1373,7 @@ void MovementInfo::OutDebug()
 
 WorldObject::WorldObject(bool isWorldObject): WorldLocation(),
 m_name(""), m_isActive(false), m_isWorldObject(isWorldObject), m_zoneScript(NULL),
-m_transport(NULL), m_currMap(NULL), m_InstanceId(0),
+m_transport(NULL), m_currMap(NULL), m_InstanceId(0), m_specialVisibilityType(SPECIAL_VISIBILITY_NONE), m_specialVisibilityGUID(),
 m_phaseMask(PHASEMASK_NORMAL), m_explicitSeerGuid(),
 m_stealthVisibilityUpdateTimer(STEALTH_VISIBILITY_UPDATE_TIMER)
 {
@@ -2094,7 +2094,7 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool ignoreStealth, boo
     if (this == obj)
         return true;
 
-    if (obj->IsNeverVisible() || CanNeverSee(obj))
+    if (obj->IsNeverVisible() || CanNeverSee(obj) || !obj->CanDetectSpecialVisibility(this))
         return false;
 
     if (obj->IsAlwaysVisibleFor(this) || CanAlwaysSee(obj))
@@ -2347,6 +2347,75 @@ bool WorldObject::CanDetectStealthOf(WorldObject const* obj) const
 
         if (distance > visibilityRange)
             return false;
+    }
+
+    return true;
+}
+
+bool WorldObject::CanDetectSpecialVisibility(WorldObject const* obj) const
+{
+    if (m_specialVisibilityType == SPECIAL_VISIBILITY_NONE)
+        return true;
+
+    if (obj->m_specialVisibilityGUID == m_specialVisibilityGUID)
+        return true;
+
+    switch (m_specialVisibilityType)
+    {
+    case SPECIAL_VISIBILITY_PLAYER:
+    {
+        return obj->GetGUID() == m_specialVisibilityGUID;
+    }
+    case SPECIAL_VISIBILITY_GROUP:
+    {
+        Player* player = ObjectAccessor::FindPlayer(m_specialVisibilityGUID);
+        if (!player)
+            return false;
+
+        if (obj->GetTypeId() != TYPEID_PLAYER)
+            return false;
+
+        return player->IsInSameRaidWith(obj->ToPlayer());
+    }
+    case SPECIAL_VISIBILITY_FRIENDLY:
+    {
+        Player* player = ObjectAccessor::FindPlayer(m_specialVisibilityGUID);
+        if (!player)
+            return false;
+
+        if (obj->GetTypeId() != TYPEID_PLAYER)
+            return false;
+
+        return player->IsFriendlyTo(obj->ToUnit());
+    }
+    case SPECIAL_VISIBILITY_UNFRIENDLY:
+    {
+        Player* player = ObjectAccessor::FindPlayer(m_specialVisibilityGUID);
+        if (!player)
+            return false;
+
+        if (obj->GetTypeId() != TYPEID_PLAYER)
+            return false;
+
+        return !player->IsFriendlyTo(obj->ToUnit());
+    }
+    case SPECIAL_VISIBILITY_KILLER: // TODO: fix it
+        return true;
+    case SPECIAL_VISIBILITY_CREATURES_AND_OWNER:
+    {
+        if (obj->GetTypeId() == TYPEID_UNIT)
+        {
+            if (obj->ToUnit()->IsPet())
+                return false;
+
+            if (obj->m_specialVisibilityType == SPECIAL_VISIBILITY_CREATURES_AND_OWNER)
+                return obj->m_specialVisibilityGUID == m_specialVisibilityGUID;
+        }
+
+        return obj->GetTypeId() != TYPEID_PLAYER || obj->GetGUID() == m_specialVisibilityGUID;
+    }
+    default:
+        break;
     }
 
     return true;
@@ -3651,6 +3720,26 @@ struct WorldObjectChangeAccumulator
 
     template<class SKIP> void Visit(GridRefManager<SKIP> &) { }
 };
+
+void WorldObject::SetSpecialInvisibility(SpecialVisibility type, uint64 guid)
+{
+    bool update = false;
+    if (type && guid)
+    {
+        update = true;
+        m_specialVisibilityType = type;
+        m_specialVisibilityGUID = guid;
+    }
+    else
+    {
+        update = m_specialVisibilityType == SPECIAL_VISIBILITY_NONE;
+        m_specialVisibilityType = SPECIAL_VISIBILITY_NONE;
+        m_specialVisibilityGUID = guid;
+    }
+
+    if (update && IsInWorld())
+        UpdateObjectVisibility(false);
+}
 
 void WorldObject::BuildUpdate(UpdateDataMapType& data_map, const uint32 diff)
 {

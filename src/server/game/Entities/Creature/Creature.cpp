@@ -1700,6 +1700,9 @@ void Creature::Respawn(bool force)
 
         GetMotionMaster()->InitDefault();
 
+        if (GetSpecialInvisibility() == SPECIAL_VISIBILITY_KILLER)
+            SetSpecialInvisibility(SPECIAL_VISIBILITY_NONE, 0);
+
         //Call AI respawn virtual function
         if (IsAIEnabled)
             TriggerJustRespawned = true;//delay event to next tick so all creatures are created on the map before processing
