@@ -2956,6 +2956,8 @@ public:
         if (IsSummon()) return reinterpret_cast<TempSummon const*>(this); else return NULL;
     }
 
+    Unit* GetTempSummoner();
+
     uint64 GetTarget() const
     {
         return GetUInt64Value(UNIT_FIELD_TARGET);

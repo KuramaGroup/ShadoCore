@@ -17279,6 +17279,15 @@ public:
     }
 };
 
+Unit* Unit::GetTempSummoner()
+{
+    TempSummon* summon = ToTempSummon();
+    if (!summon)
+        return nullptr;
+
+    return summon->GetSummoner();
+}
+
 void Unit::OnRelocated()
 {
     if (!m_lastVisibilityUpdPos.IsInDist(this, World::Visibility_RelocationLowerLimit)) {
