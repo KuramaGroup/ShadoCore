@@ -2998,6 +2998,15 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
                     spellInfo->AttributesCu |= SPELL_ATTR0_CU_PERSISTENT;
                     spellInfo->AttributesCu |= SPELL_ATTR0_CU_DONT_SAVE_AURA_TO_DB;
                     break;
+                case 83575: // Blight Concoction
+                    spellInfo->Effects[0].TargetA = TARGET_UNIT_SRC_AREA_ENTRY;
+                    break;
+                case 83839: // Orc Sea Pup (summon)
+                    spellInfo->Effects[0].MiscValueB = 2938;
+                    break;
+                case 83838: // Trigger Orc Sea Pup
+                    spellInfo->MaxAffectedTargets = 1;
+                    break;
                 default:
                     break;
             }
