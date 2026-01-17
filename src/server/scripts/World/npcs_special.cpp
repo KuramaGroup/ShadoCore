@@ -58,6 +58,7 @@ EndContentData */
 #include "Pet.h"
 #include "BlackMarketMgr.h"
 #include "CombatAI.h"
+#include "Transport.h"
 
 /*########
 # npc_air_force_bots
@@ -3338,6 +3339,325 @@ struct npc_pandaren_firework_launcher : public ScriptedAI
     }
 };
 
+enum eContinentalTransports
+{
+    EVENT_UC_GG_TIRISFAL_ARRIVAL = 15312,
+    EVENT_UC_GG_TIRISFAL_DEPARTURE = 15313,
+    EVENT_UC_GG_GROMGOL_ARRIVAL = 15314,
+    EVENT_UC_GG_GROMGOL_DEPARTURE = 15315,
+
+    EVENT_UC_OG_ORGRIMMAR_ARRIVAL = 15318,
+    EVENT_UC_OG_ORGRIMMAR_DEPARTURE = 15319,
+    EVENT_UC_OG_TIRISFAL_ARRIVAL = 15320,
+    EVENT_UC_OG_TIRISFAL_DEPARTURE = 15321,
+
+    EVENT_SV_OG_ORGRIMMAR_ARRIVAL = 15322,
+    EVENT_SV_OG_ORGRIMMAR_DEPARTURE = 15323,
+    EVENT_SV_OG_GROMGOL_ARRIVAL = 15324,
+    EVENT_SV_OG_GROMGOL_DEPARTURE = 15325,
+
+    // Orgrimmar <-> Undercity
+    NPC_FREZZA = 9564,
+    NPC_ZAPETTA = 9566,
+
+    // Orgrimmar <-> Grom'gol
+    NPC_NEZRAZ = 3149,
+    NPC_SNURK = 12136,
+
+    // Undercity <-> Grom'gol
+    NPC_HIN_DENBURG = 3150,
+    NPC_SQUIBBY_OVERSPECK = 12137,
+
+    // Undercity <-> Howling Fjord
+    NPC_MEEFI_FARTHROTTLE = 26539,
+    NPC_DRENK_SPANNERSPARK = 26540,
+
+    // Orgrimmar <-> Borean Tundra
+    NPC_GREEB_RAMROCKET = 26537,
+    NPC_NARGO_SCREWBORE = 26538,
+
+    // Orgrimmar <-> Thunder Bluff
+    NPC_ZELLI_HOTNOZZLE = 34765,
+    NPC_KRENDLE_BIGPOCKETS = 34766,
+
+    ZEPPELIN_STATE_NONE = 0,
+    ZEPPELIN_STATE_JUST_DEPARTED = 1,	// Zeppelin just departed from this tower
+    ZEPPELIN_STATE_JUST_REACHED = 2,	// Zeppelin just arrived at the other tower
+    ZEPPELIN_STATE_COMING_SOON = 3,	// Zeppelin just departed from the other tower
+
+    TEXT_ZEPPELIN_JUST_REACHED_ORG = 11165,
+    TEXT_ZEPPELIN_JUST_ARRIVED_AT_UC = 11173,
+    TEXT_ZEPPELIN_JUST_DEPARTED_FROM_ORG = 11174,
+    TEXT_ZEPPELIN_JUST_DEPARTED_FROM_UC = 11175,
+
+    // Orgrimmar <-> Grom'gol zeppelin masters have slightly different npc text
+    TEXT_ZEPPELIN_JUST_ARRIVED_AT_GG_FROM_ORG = 11167,
+    TEXT_ZEPPELIN_JUST_ARRIVED_AT_ORG_FROM_GG = 11169,
+    TEXT_ZEPPELIN_JUST_DEPARTED_FROM_ORG_TO_GG = 11170,
+    TEXT_ZEPPELIN_JUST_DEPARTED_FROM_GG_TO_ORG = 11172,
+
+    // Undercity <-> Grom'gol zeppelin masters have slightly different npc text
+    TEXT_ZEPPELIN_JUST_ARRIVED_AT_UC_FROM_GG = 11179,
+    TEXT_ZEPPELIN_JUST_ARRIVED_AT_GG_FROM_UC = 11180,
+    TEXT_ZEPPELIN_JUST_DEPARTED_FROM_GG_TO_UC = 11181,
+    TEXT_ZEPPELIN_JUST_DEPARTED_FROM_UC_TO_GG = 11182,
+
+    GUID_TRANSPORT_GG_UC = 34,
+    GUID_TRANSPORT_GG_ORG = 35,
+    GUID_TRANSPORT_UC_ORG = 36,
+
+    SOUND_ZEPPELIN_HORN = 11804
+};
+
+#define GOSSIP_HELLO_ZEPPELIN_ASK "Where is the zeppelin now?"
+
+class npc_zeppelin_master : public CreatureScript
+{
+public:
+    npc_zeppelin_master() : CreatureScript("npc_zeppelin_master") { }
+
+    CreatureAI* GetAI(Creature* pCreature) const override
+    {
+        return new npc_zeppelin_masterAI(pCreature);
+    }
+
+    bool OnGossipHello(Player* player, Creature* me) override
+    {
+        return true;
+    }
+
+    struct npc_zeppelin_masterAI : public ScriptedAI
+    {
+        npc_zeppelin_masterAI(Creature* c) : ScriptedAI(c)
+        {
+            zeppelinState = ZEPPELIN_STATE_NONE;
+            gossipMenuId = 0;
+            gossipTexts.clear();
+            myEntry = 0;
+            myEntry = me->GetEntry();
+            TC_LOG_INFO("server.loading", "npc_zeppelin_masterAI myEntry %u", myEntry);
+            GetInitZeppelinState();
+        }
+
+        uint8 zeppelinState;
+        uint32 gossipMenuId;
+        uint32 myEntry;
+        std::map<uint32, uint32> gossipTexts;
+
+        void GetInitZeppelinState()
+        {
+            uint32 guid = 0;
+
+            switch (myEntry)
+            {
+            case NPC_ZAPETTA:
+            case NPC_FREZZA:
+                guid = GUID_TRANSPORT_UC_ORG;
+                break;
+            case NPC_NEZRAZ:
+            case NPC_SNURK:
+                guid = GUID_TRANSPORT_GG_ORG;
+                break;
+            case NPC_HIN_DENBURG:
+            case NPC_SQUIBBY_OVERSPECK:
+                guid = GUID_TRANSPORT_GG_UC;
+                break;
+            }
+
+            if (guid)
+                if (Transport* transport = ObjectAccessor::GetTransport(*me, guid))
+                    SetData(transport->GetLastEventId(), 1);
+        }
+
+        void sGossipHello(Player* player) override
+        {
+            if (zeppelinState)
+            {
+                if (!gossipMenuId)
+                    gossipMenuId = me->GetCreatureTemplate()->GossipMenuId;
+
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_HELLO_ZEPPELIN_ASK, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
+            }
+
+            player->SEND_GOSSIP_MENU(player->GetGossipTextId(me), me->GetGUID());
+        }
+
+        void sGossipSelect(Player* player, uint32 /*sender*/, uint32 /*action*/) override
+        {
+            player->PlayerTalkClass->ClearMenus();
+
+            if (zeppelinState)
+            {
+                if (gossipTexts.empty())
+                    GetZeppelinPositionGossipTexts();
+
+                player->SEND_GOSSIP_MENU(gossipTexts[zeppelinState], me->GetGUID());
+            }
+            else
+                player->PlayerTalkClass->SendCloseGossip();
+        }
+
+        void GetZeppelinPositionGossipTexts()
+        {
+            switch (me->GetEntry())
+            {
+            case NPC_ZAPETTA:
+                gossipTexts[ZEPPELIN_STATE_JUST_DEPARTED] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_UC;
+                gossipTexts[ZEPPELIN_STATE_JUST_REACHED] = TEXT_ZEPPELIN_JUST_REACHED_ORG;
+                gossipTexts[ZEPPELIN_STATE_COMING_SOON] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_ORG;
+                break;
+            case NPC_FREZZA:
+                gossipTexts[ZEPPELIN_STATE_JUST_DEPARTED] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_ORG;
+                gossipTexts[ZEPPELIN_STATE_JUST_REACHED] = TEXT_ZEPPELIN_JUST_ARRIVED_AT_UC;
+                gossipTexts[ZEPPELIN_STATE_COMING_SOON] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_UC;
+                break;
+            case NPC_NEZRAZ:
+                gossipTexts[ZEPPELIN_STATE_JUST_DEPARTED] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_GG_TO_ORG;
+                gossipTexts[ZEPPELIN_STATE_JUST_REACHED] = TEXT_ZEPPELIN_JUST_ARRIVED_AT_ORG_FROM_GG;
+                gossipTexts[ZEPPELIN_STATE_COMING_SOON] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_ORG_TO_GG;
+                break;
+            case NPC_SNURK:
+                gossipTexts[ZEPPELIN_STATE_JUST_DEPARTED] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_ORG_TO_GG;
+                gossipTexts[ZEPPELIN_STATE_JUST_REACHED] = TEXT_ZEPPELIN_JUST_ARRIVED_AT_GG_FROM_ORG;
+                gossipTexts[ZEPPELIN_STATE_COMING_SOON] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_GG_TO_ORG;
+                break;
+            case NPC_HIN_DENBURG:
+                gossipTexts[ZEPPELIN_STATE_JUST_DEPARTED] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_UC_TO_GG;
+                gossipTexts[ZEPPELIN_STATE_JUST_REACHED] = TEXT_ZEPPELIN_JUST_ARRIVED_AT_GG_FROM_UC;
+                gossipTexts[ZEPPELIN_STATE_COMING_SOON] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_GG_TO_UC;
+                break;
+            case NPC_SQUIBBY_OVERSPECK:
+                gossipTexts[ZEPPELIN_STATE_JUST_DEPARTED] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_GG_TO_UC;
+                gossipTexts[ZEPPELIN_STATE_JUST_REACHED] = TEXT_ZEPPELIN_JUST_ARRIVED_AT_UC_FROM_GG;
+                gossipTexts[ZEPPELIN_STATE_COMING_SOON] = TEXT_ZEPPELIN_JUST_DEPARTED_FROM_UC_TO_GG;
+                break;
+            }
+        }
+
+        void UpdateOrgrimmarUndercityState(uint32 eventId, uint32 init)
+        {
+            switch (eventId)
+            {
+            case EVENT_UC_OG_TIRISFAL_ARRIVAL:
+                if (myEntry == NPC_ZAPETTA)
+                {
+                    zeppelinState = ZEPPELIN_STATE_NONE;
+                    if (!init)
+                    {
+                        Talk(0);
+                        me->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                    }
+                }
+                else
+                    zeppelinState = ZEPPELIN_STATE_JUST_REACHED;
+                break;
+            case EVENT_UC_OG_TIRISFAL_DEPARTURE:
+                zeppelinState = myEntry == NPC_FREZZA ? ZEPPELIN_STATE_COMING_SOON : ZEPPELIN_STATE_JUST_DEPARTED;
+                break;
+            case EVENT_UC_OG_ORGRIMMAR_ARRIVAL:
+                if (myEntry == NPC_FREZZA)
+                {
+                    zeppelinState = ZEPPELIN_STATE_NONE;
+                    if (!init)
+                    {
+                        Talk(0);
+                        me->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                    }
+                }
+                else
+                    zeppelinState = ZEPPELIN_STATE_JUST_REACHED;
+                break;
+            case EVENT_UC_OG_ORGRIMMAR_DEPARTURE:
+                zeppelinState = myEntry == NPC_ZAPETTA ? ZEPPELIN_STATE_COMING_SOON : ZEPPELIN_STATE_JUST_DEPARTED;
+                break;
+            }
+        }
+
+        void UpdateOrgrimmarGromgolState(uint32 eventId, uint32 init)
+        {
+            switch (eventId)
+            {
+            case EVENT_SV_OG_GROMGOL_ARRIVAL:
+                zeppelinState = myEntry == NPC_NEZRAZ ? ZEPPELIN_STATE_NONE : ZEPPELIN_STATE_JUST_REACHED;
+                break;
+            case EVENT_SV_OG_GROMGOL_DEPARTURE:
+                zeppelinState = myEntry == NPC_SNURK ? ZEPPELIN_STATE_COMING_SOON : ZEPPELIN_STATE_JUST_DEPARTED;
+                break;
+            case EVENT_SV_OG_ORGRIMMAR_ARRIVAL:
+                if (myEntry == NPC_SNURK)
+                {
+                    zeppelinState = ZEPPELIN_STATE_NONE;
+                    if (!init)
+                    {
+                        Talk(0);
+                        me->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                    }
+                }
+                else
+                    zeppelinState = ZEPPELIN_STATE_JUST_REACHED;
+                break;
+            case EVENT_SV_OG_ORGRIMMAR_DEPARTURE:
+                zeppelinState = myEntry == NPC_NEZRAZ ? ZEPPELIN_STATE_COMING_SOON : ZEPPELIN_STATE_JUST_DEPARTED;
+                break;
+            }
+        }
+
+        void UpdateUndercityGromgolState(uint32 eventId, uint32 init)
+        {
+            switch (eventId)
+            {
+            case EVENT_UC_GG_GROMGOL_ARRIVAL:
+                zeppelinState = myEntry == NPC_SQUIBBY_OVERSPECK ? ZEPPELIN_STATE_NONE : ZEPPELIN_STATE_JUST_REACHED;
+                break;
+            case EVENT_UC_GG_GROMGOL_DEPARTURE:
+                zeppelinState = myEntry == NPC_HIN_DENBURG ? ZEPPELIN_STATE_COMING_SOON : ZEPPELIN_STATE_JUST_DEPARTED;
+                break;
+            case EVENT_UC_GG_TIRISFAL_ARRIVAL:
+                if (myEntry == NPC_HIN_DENBURG)
+                {
+                    zeppelinState = ZEPPELIN_STATE_NONE;
+                    if (!init)
+                    {
+                        Talk(0);
+                        me->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                    }
+                }
+                else
+                    zeppelinState = ZEPPELIN_STATE_JUST_REACHED;
+                break;
+            case EVENT_UC_GG_TIRISFAL_DEPARTURE:
+                zeppelinState = myEntry == NPC_SQUIBBY_OVERSPECK ? ZEPPELIN_STATE_COMING_SOON : ZEPPELIN_STATE_JUST_DEPARTED;
+                break;
+            }
+        }
+
+        void SetData(uint32 eventId, uint32 Value) override
+        {
+            switch (eventId)
+            {
+            case EVENT_UC_OG_TIRISFAL_ARRIVAL:
+            case EVENT_UC_OG_TIRISFAL_DEPARTURE:
+            case EVENT_UC_OG_ORGRIMMAR_ARRIVAL:
+            case EVENT_UC_OG_ORGRIMMAR_DEPARTURE:
+                UpdateOrgrimmarUndercityState(eventId, Value);
+                break;
+            case EVENT_SV_OG_GROMGOL_ARRIVAL:
+            case EVENT_SV_OG_GROMGOL_DEPARTURE:
+            case EVENT_SV_OG_ORGRIMMAR_ARRIVAL:
+            case EVENT_SV_OG_ORGRIMMAR_DEPARTURE:
+                UpdateOrgrimmarGromgolState(eventId, Value);
+                break;
+            case EVENT_UC_GG_GROMGOL_ARRIVAL:
+            case EVENT_UC_GG_GROMGOL_DEPARTURE:
+            case EVENT_UC_GG_TIRISFAL_ARRIVAL:
+            case EVENT_UC_GG_TIRISFAL_DEPARTURE:
+                UpdateUndercityGromgolState(eventId, Value);
+                break;
+            }
+        }
+    };
+};
+
 void AddSC_npcs_special()
 {
     new npc_air_force_bots();
@@ -3380,4 +3700,5 @@ void AddSC_npcs_special()
     new creature_script<npc_sa_demolisher>("npc_sa_demolisher");
     new creature_script<npc_rogue_rare_npc>("npc_rogue_rare_npc");
     new creature_script<npc_pandaren_firework_launcher>("npc_pandaren_firework_launcher");
+    new npc_zeppelin_master();
 }

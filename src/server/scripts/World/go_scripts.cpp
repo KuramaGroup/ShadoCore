@@ -1555,6 +1555,299 @@ class go_sota_seaforium_bomb : public GameObjectScript
         }
 };
 
+enum eContinentalTransports
+{
+    EVENT_UC_GG_TIRISFAL_ARRIVAL = 15312,
+    EVENT_UC_GG_TIRISFAL_DEPARTURE = 15313,
+    EVENT_UC_GG_GROMGOL_ARRIVAL = 15314,
+    EVENT_UC_GG_GROMGOL_DEPARTURE = 15315,
+
+    EVENT_UC_OG_ORGRIMMAR_ARRIVAL = 15318,
+    EVENT_UC_OG_ORGRIMMAR_DEPARTURE = 15319,
+    EVENT_UC_OG_TIRISFAL_ARRIVAL = 15320,
+    EVENT_UC_OG_TIRISFAL_DEPARTURE = 15321,
+
+    EVENT_SV_OG_ORGRIMMAR_ARRIVAL = 15322,
+    EVENT_SV_OG_ORGRIMMAR_DEPARTURE = 15323,
+    EVENT_SV_OG_GROMGOL_ARRIVAL = 15324,
+    EVENT_SV_OG_GROMGOL_DEPARTURE = 15325,
+
+    EVENT_UC_HF_FJORD_ARRIVAL = 19126,
+    EVENT_UC_HF_TIRISFAL_ARRIVAL = 19127,
+
+    EVENT_OG_BT_ORGRIMMAR_ARRIVAL = 19137,
+    EVENT_OG_BT_BOREAN_ARRIVAL = 19139,
+
+    EVENT_TB_OG_ORGRIMMAR_ARRIVAL = 21868,
+    EVENT_TB_OG_MULGORE_ARRIVAL = 21870,
+
+    // Orgrimmar <-> Undercity
+    NPC_FREZZA = 9564,
+    NPC_ZAPETTA = 9566,
+    GUID_UC_OG_ORGRIMMAR_MASTER = 81575,
+    GUID_UC_OG_TIRISFAL_MASTER = 89443,
+
+    // Orgrimmar <-> Grom'gol
+    NPC_NEZRAZ = 3149,
+    NPC_SNURK = 12136,
+    GUID_SV_OG_ORGRIMMAR_MASTER = 82268,
+    GUID_SV_OG_GROMGOL_MASTER = 145950,
+
+    // Undercity <-> Grom'gol
+    NPC_HIN_DENBURG = 3150,
+    NPC_SQUIBBY_OVERSPECK = 12137,
+    GUID_UC_GG_TIRISFAL_MASTER = 91386,
+    GUID_UC_GG_GROMGOL_MASTER = 146201,
+
+    // Undercity <-> Howling Fjord
+    NPC_MEEFI_FARTHROTTLE = 26539,
+    NPC_DRENK_SPANNERSPARK = 26540,
+    GUID_UC_HF_TIRISFAL_MASTER = 89689,
+    GUID_UC_HF_FJORD_MASTER = 53901,
+
+    // Orgrimmar <-> Borean Tundra
+    NPC_GREEB_RAMROCKET = 26537,
+    NPC_NARGO_SCREWBORE = 26538,
+    GUID_ORG_BT_ORGRIMMAR_MASTER = 82020,
+    GUID_ORG_BT_BOREAN_MASTER = 66388,
+
+    // Orgrimmar <-> Thunder Bluff
+    NPC_ZELLI_HOTNOZZLE = 34765,
+    NPC_KRENDLE_BIGPOCKETS = 34766,
+    GUID_ORG_TB_ORGRIMMAR_MASTER = 79453,
+    GUID_ORG_TB_THUNDERBLUFF_MASTER = 86786,
+
+    SOUND_ZEPPELIN_HORN = 11804
+};
+
+class go_continental_transport : public GameObjectScript
+{
+public:
+    go_continental_transport() : GameObjectScript("go_continental_transport") { }
+
+    struct go_continental_transportAI : public GameObjectAI
+    {
+        go_continental_transportAI(GameObject* gameObject) : GameObjectAI(gameObject) { }
+
+        void EventInform(uint32 eventId) override
+        {
+            if (!eventId)
+                return;
+
+            uint32 entry = 0;
+            uint32 guid = 0;
+            uint64 zapettaGUID = 0;
+            uint64 frezzaGUID = 0;
+            uint64 snurkGUID = 0;
+            uint64 nezrazGUID = 0;
+            uint64 denburgGUID = 0;
+            uint64 overspeckGUID = 0;
+            uint64 fjordGUID = 0;
+            uint64 tirisfalGUID = 0;
+            uint64 orgrimmarGUID = 0;
+            uint64 boreanGUID = 0;
+            uint64 orgrimmarTbGUID = 0;
+            uint64 thunderGUID = 0;
+
+            switch (eventId)
+            {
+            case EVENT_UC_OG_ORGRIMMAR_ARRIVAL:
+            case EVENT_UC_OG_ORGRIMMAR_DEPARTURE:
+            case EVENT_UC_OG_TIRISFAL_ARRIVAL:
+            case EVENT_UC_OG_TIRISFAL_DEPARTURE:
+                //if (Creature* creature = go->GetMap()->GetCreature(ObjectGuid(HighGuid::Unit, NPC_ZAPETTA, uint32(GUID_UC_OG_TIRISFAL_MASTER))))
+               // if (Creature* creature = ObjectAccessor::GetObjectInWorld(ObjectGuid(HighGuid::Unit, NPC_ZAPETTA, uint32(GUID_UC_OG_TIRISFAL_MASTER)), (Creature*)NULL))
+                if (Creature* creature = go->GetMap()->GetCreature(zapettaGUID))
+                    creature->AI()->SetData(eventId, 0);
+                else if (Creature* creature = go->FindNearestCreature(NPC_ZAPETTA, 35.0f))
+                {
+                    creature->AI()->SetData(eventId, 0);
+                    zapettaGUID = creature->GetGUID();
+                }
+
+                //if (Creature* creature = go->GetMap()->GetCreature(ObjectGuid(HighGuid::Unit, NPC_FREZZA, uint32(GUID_UC_OG_ORGRIMMAR_MASTER))))
+                //if (Creature* creature = ObjectAccessor::GetObjectInWorld(ObjectGuid(HighGuid::Unit, NPC_FREZZA, uint32(GUID_UC_OG_ORGRIMMAR_MASTER)), (Creature*)NULL))
+                if (Creature* creature = go->GetMap()->GetCreature(frezzaGUID))
+                    creature->AI()->SetData(eventId, 0);
+                else if (Creature* creature = go->FindNearestCreature(NPC_FREZZA, 35.0f))
+                {
+                    creature->AI()->SetData(eventId, 0);
+                    frezzaGUID = creature->GetGUID();
+                }
+                break;
+
+            case EVENT_SV_OG_ORGRIMMAR_ARRIVAL:
+            case EVENT_SV_OG_ORGRIMMAR_DEPARTURE:
+            case EVENT_SV_OG_GROMGOL_ARRIVAL:
+            case EVENT_SV_OG_GROMGOL_DEPARTURE:
+                //if (Creature* creature = go->GetMap()->GetCreature(ObjectGuid(HighGuid::Unit, NPC_SNURK, uint32(GUID_SV_OG_ORGRIMMAR_MASTER))))
+                //if (Creature* creature = ObjectAccessor::GetObjectInWorld(ObjectGuid(HighGuid::Unit, NPC_SNURK, uint32(GUID_SV_OG_ORGRIMMAR_MASTER)), (Creature*)NULL))
+                if (Creature* creature = go->GetMap()->GetCreature(snurkGUID))
+                    creature->AI()->SetData(eventId, 0);
+                else if (Creature* creature = go->FindNearestCreature(NPC_SNURK, 35.0f))
+                {
+                    creature->AI()->SetData(eventId, 0);
+                    snurkGUID = creature->GetGUID();
+                }
+
+                //if (Creature* creature = go->GetMap()->GetCreature(ObjectGuid(HighGuid::Unit, NPC_NEZRAZ, uint32(GUID_SV_OG_GROMGOL_MASTER))))
+                //if (Creature* creature = ObjectAccessor::GetObjectInWorld(ObjectGuid(HighGuid::Unit, NPC_NEZRAZ, uint32(GUID_SV_OG_GROMGOL_MASTER)), (Creature*)NULL))
+                if (Creature* creature = go->GetMap()->GetCreature(nezrazGUID))
+                    creature->AI()->SetData(eventId, 0);
+                else if (Creature* creature = go->FindNearestCreature(NPC_NEZRAZ, 35.0f))
+                {
+                    creature->AI()->SetData(eventId, 0);
+                    nezrazGUID = creature->GetGUID();
+                }
+                break;
+
+            case EVENT_UC_GG_TIRISFAL_ARRIVAL:
+            case EVENT_UC_GG_TIRISFAL_DEPARTURE:
+            case EVENT_UC_GG_GROMGOL_ARRIVAL:
+            case EVENT_UC_GG_GROMGOL_DEPARTURE:
+                //if (Creature* creature = go->GetMap()->GetCreature(ObjectGuid(HighGuid::Unit, NPC_HIN_DENBURG, uint32(GUID_UC_GG_TIRISFAL_MASTER))))
+                //if (Creature* creature = ObjectAccessor::GetObjectInWorld(ObjectGuid(HighGuid::Unit, NPC_HIN_DENBURG, uint32(GUID_UC_GG_TIRISFAL_MASTER)), (Creature*)NULL))
+                if (Creature* creature = go->GetMap()->GetCreature(denburgGUID))
+                    creature->AI()->SetData(eventId, 0);
+                else if (Creature* creature = go->FindNearestCreature(NPC_HIN_DENBURG, 35.0f))
+                {
+                    creature->AI()->SetData(eventId, 0);
+                    denburgGUID = creature->GetGUID();
+                }
+
+                //if (Creature* creature = go->GetMap()->GetCreature(ObjectGuid(HighGuid::Unit, NPC_SQUIBBY_OVERSPECK, uint32(GUID_UC_GG_GROMGOL_MASTER))))
+                //if (Creature* creature = ObjectAccessor::GetObjectInWorld(ObjectGuid(HighGuid::Unit, NPC_SQUIBBY_OVERSPECK, uint32(GUID_UC_GG_GROMGOL_MASTER)), (Creature*)NULL))
+                if (Creature* creature = go->GetMap()->GetCreature(overspeckGUID))
+                    creature->AI()->SetData(eventId, 0);
+                else if (Creature* creature = go->FindNearestCreature(NPC_SQUIBBY_OVERSPECK, 35.0f))
+                {
+                    creature->AI()->SetData(eventId, 0);
+                    overspeckGUID = creature->GetGUID();
+                }
+                break;
+
+            case EVENT_UC_HF_FJORD_ARRIVAL:
+                if (Creature* creature = go->GetMap()->GetCreature(fjordGUID))
+                {
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+                else if (Creature* creature = go->FindNearestCreature(NPC_DRENK_SPANNERSPARK, 35.0f))
+                {
+                    fjordGUID = creature->GetGUID();
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+
+                entry = NPC_DRENK_SPANNERSPARK;
+                guid = GUID_UC_HF_FJORD_MASTER;
+                break;
+
+            case EVENT_UC_HF_TIRISFAL_ARRIVAL:
+                if (Creature* creature = go->GetMap()->GetCreature(tirisfalGUID))
+                {
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+                else if (Creature* creature = go->FindNearestCreature(NPC_MEEFI_FARTHROTTLE, 35.0f))
+                {
+                    tirisfalGUID = creature->GetGUID();
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+
+                entry = NPC_MEEFI_FARTHROTTLE;
+                guid = GUID_UC_HF_TIRISFAL_MASTER;
+                break;
+
+            case EVENT_OG_BT_ORGRIMMAR_ARRIVAL:
+                if (Creature* creature = go->GetMap()->GetCreature(orgrimmarGUID))
+                {
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+                else if (Creature* creature = go->FindNearestCreature(NPC_GREEB_RAMROCKET, 35.0f))
+                {
+                    orgrimmarGUID = creature->GetGUID();
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+
+                entry = NPC_GREEB_RAMROCKET;
+                guid = GUID_ORG_BT_ORGRIMMAR_MASTER;
+                break;
+
+            case EVENT_OG_BT_BOREAN_ARRIVAL:
+                if (Creature* creature = go->GetMap()->GetCreature(boreanGUID))
+                {
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+                else if (Creature* creature = go->FindNearestCreature(NPC_NARGO_SCREWBORE, 35.0f))
+                {
+                    boreanGUID = creature->GetGUID();
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+
+                entry = NPC_NARGO_SCREWBORE;
+                guid = GUID_ORG_BT_BOREAN_MASTER;
+                break;
+
+            case EVENT_TB_OG_ORGRIMMAR_ARRIVAL:
+                if (Creature* creature = go->GetMap()->GetCreature(orgrimmarTbGUID))
+                {
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+                else if (Creature* creature = go->FindNearestCreature(NPC_ZELLI_HOTNOZZLE, 35.0f))
+                {
+                    orgrimmarTbGUID = creature->GetGUID();
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+
+                entry = NPC_ZELLI_HOTNOZZLE;
+                guid = GUID_ORG_TB_ORGRIMMAR_MASTER;
+                break;
+
+            case EVENT_TB_OG_MULGORE_ARRIVAL:
+                if (Creature* creature = go->GetMap()->GetCreature(thunderGUID))
+                {
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+                else if (Creature* creature = go->FindNearestCreature(NPC_KRENDLE_BIGPOCKETS, 35.0f))
+                {
+                    thunderGUID = creature->GetGUID();
+
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+
+                entry = NPC_KRENDLE_BIGPOCKETS;
+                guid = GUID_ORG_TB_THUNDERBLUFF_MASTER;
+                break;
+            }
+
+            /*if (entry && guid)
+            {
+                if (Creature* creature = go->GetMap()->GetCreature(ObjectGuid(HighGuid::Unit, entry, guid)))
+                //if (Creature* creature = ObjectAccessor::GetObjectInWorld(ObjectGuid(HighGuid::Unit, entry, guid), (Creature*)NULL))
+                {
+                    creature->AI()->Talk(0);
+                    creature->PlayDistanceSound(SOUND_ZEPPELIN_HORN);
+                }
+            }*/
+        }
+    };
+
+    GameObjectAI* GetAI(GameObject* go) const
+    {
+        return new go_continental_transportAI(go);
+    }
+};
+
 void AddSC_go_scripts()
 {
     new go_cat_figurine();
@@ -1599,4 +1892,5 @@ void AddSC_go_scripts()
     new go_memory_wine();
     new go_golden_lotus();
     new go_sota_seaforium_bomb();
+    new go_continental_transport();
 }

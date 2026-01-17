@@ -102,6 +102,7 @@ class Transport : public GameObject, public TransportBase
         void SetDelayedAddModelToMap() { _delayedAddModel = true; }
 
         TransportTemplate const* GetTransportTemplate() const { return _transportInfo; }
+        uint32 GetLastEventId() { return _lastEventId; }
 
     private:
         void MoveToNextWaypoint();
@@ -127,6 +128,7 @@ class Transport : public GameObject, public TransportBase
         //! These are needed to properly control events triggering only once for each frame
         bool _triggeredArrivalEvent;
         bool _triggeredDepartureEvent;
+        uint32 _lastEventId;
 
         PassengerSet _passengers;
         PassengerSet::iterator _passengerTeleportItr;
