@@ -3435,7 +3435,6 @@ public:
             gossipTexts.clear();
             myEntry = 0;
             myEntry = me->GetEntry();
-            TC_LOG_INFO("server.loading", "npc_zeppelin_masterAI myEntry %u", myEntry);
             GetInitZeppelinState();
         }
 

@@ -2045,6 +2045,414 @@ public:
     }
 };
 
+class npc_fenris_keep_camera_bunny1 : public CreatureScript
+{
+public:
+    npc_fenris_keep_camera_bunny1() : CreatureScript("npc_fenris_keep_camera_bunny1") { }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_fenris_keep_camera_bunny1AI(creature);
+    }
+
+    struct npc_fenris_keep_camera_bunny1AI : public ScriptedAI
+    {
+        npc_fenris_keep_camera_bunny1AI(Creature* creature) : ScriptedAI(creature) { }
+
+        bool CheckVehicle(ObjectGuid PlayerGUID)
+        {
+            std::list<Creature*> pCreatureList;
+            Trinity::AllCreaturesOfEntryInRange checker(me, 45003, 20);
+            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(me, pCreatureList, checker);
+            me->VisitNearbyObject(4, searcher);
+
+            for (std::list<Creature*>::iterator iter = pCreatureList.begin(); iter != pCreatureList.end(); ++iter)
+            {
+                if (Unit* summoner = (*iter)->GetTempSummoner())
+                {
+                    ObjectGuid pguid = summoner->GetGUID();
+                    if (PlayerGUID == pguid)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        void MoveInLineOfSight(Unit* who) override
+        {
+            Player* player = who ? who->ToPlayer() : nullptr;
+            if (!player)
+                return;
+            if (player->GetQuestStatus(27097) == QUEST_STATUS_REWARDED && player->GetQuestStatus(27099) == QUEST_STATUS_INCOMPLETE)
+            {
+                if (player->IsWithinDistInMap(me, 3.0f))
+                {
+                    if (CheckVehicle(player->GetGUID()))
+                        if (Creature* camera = player->SummonCreature(45003, who->GetPositionX(), who->GetPositionY(), who->GetPositionZ(), who->GetOrientation(), TEMPSUMMON_MANUAL_DESPAWN, 0))
+                        {
+                            camera->GetMotionMaster()->MovePath(4500300, false);
+                            player->EnterVehicle(camera, 0);
+                        }
+                }
+            }
+        }
+    };
+};
+
+class npc_fenris_keep_camera_bunny2 : public CreatureScript
+{
+public:
+    npc_fenris_keep_camera_bunny2() : CreatureScript("npc_fenris_keep_camera_bunny2") { }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_fenris_keep_camera_bunny2AI(creature);
+    }
+
+    struct npc_fenris_keep_camera_bunny2AI : public ScriptedAI
+    {
+        npc_fenris_keep_camera_bunny2AI(Creature* creature) : ScriptedAI(creature) { }
+
+
+        bool CheckVehicle(ObjectGuid PlayerGUID)
+        {
+            std::list<Creature*> pCreatureList;
+            Trinity::AllCreaturesOfEntryInRange checker(me, 45003, 20);
+            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(me, pCreatureList, checker);
+            me->VisitNearbyObject(4, searcher);
+
+            for (std::list<Creature*>::iterator iter = pCreatureList.begin(); iter != pCreatureList.end(); ++iter)
+            {
+                if (Unit* summoner = (*iter)->GetTempSummoner())
+                {
+                    ObjectGuid pguid = summoner->GetGUID();
+                    if (PlayerGUID == pguid)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        void MoveInLineOfSight(Unit* who) override
+        {
+            Player* player = who ? who->ToPlayer() : nullptr;
+            if (!player)
+                return;
+
+            if ((player->GetQuestStatus(27097) == QUEST_STATUS_REWARDED) && (player->GetQuestStatus(27099) == QUEST_STATUS_INCOMPLETE))
+            {
+                if (player->IsWithinDistInMap(me, 3.0f))
+                {
+                    if (CheckVehicle(player->GetGUID()))
+                        if (Creature* camera = player->SummonCreature(45003, who->GetPositionX(), who->GetPositionY(), who->GetPositionZ(), who->GetOrientation(), TEMPSUMMON_MANUAL_DESPAWN, 0))
+                        {
+                            camera->GetMotionMaster()->MovePath(4500301, false);
+                            player->EnterVehicle(camera, 0);
+                        }
+                }
+            }
+        }
+    };
+};
+
+class npc_fenris_keep_camera : public CreatureScript
+{
+public:
+
+    npc_fenris_keep_camera() : CreatureScript("npc_fenris_keep_camera") { }
+
+    CreatureAI* GetAI(Creature* pCreature) const override
+    {
+        return new npc_fenris_keep_cameraAI(pCreature);
+    }
+
+    struct npc_fenris_keep_cameraAI : public ScriptedAI
+    {
+        npc_fenris_keep_cameraAI(Creature* creature) : ScriptedAI(creature) { }
+
+        uint64 playerGUID;
+        uint64 BloodfangGUID;
+        uint64 CrowleyGUID;
+        uint64 PhinGUID;
+        uint64 BartoloGUID;
+        uint64 DibbsGUID;
+        uint64 MalebGUID;
+        uint64 SmithersGUID;
+        uint64 SophiaGUID;
+        uint64 ArthuraGUID;
+        uint32 Timer;
+        uint32 phase;
+        bool worgenysummoned;
+
+        void Reset() override
+        {
+            worgenysummoned = false;
+            Timer = 300;
+            playerGUID = 0;
+            BloodfangGUID = 0;
+            CrowleyGUID = 0;
+            PhinGUID = 0;
+            BartoloGUID = 0;
+            DibbsGUID = 0;
+            MalebGUID = 0;
+            SmithersGUID = 0;
+            SophiaGUID = 0;
+            ArthuraGUID = 0;
+            phase = 0;
+
+            if (Unit* summoner = me->GetTempSummoner())
+                if (summoner->GetTypeId() == TYPEID_PLAYER)
+                    playerGUID = summoner->GetGUID();
+        }
+
+        void SummonWorgens()
+        {
+            if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                if (Creature* Bloodfang = player->SummonCreature(44990, 994.53f, 687.74f, 74.8984f, 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000))
+                    if (Creature* Crowley = player->SummonCreature(44989, 994.562f, 691.186f, 74.8984f, 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000))
+                        if (Creature* Phin = player->SummonCreature(44993, 1002.52f, 693.027f, 76.1922f, 3.1415f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000))
+                            if (Creature* Bartolo = player->SummonCreature(44994, 1002.76f, 687.195f, 76.1922f, 3.1415f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000))
+                                if (Creature* Dibbs = player->SummonCreature(44995, 1002.8f, 684.256f, 76.1922f, 3.1415f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000))
+                                    if (Creature* Maleb = player->SummonCreature(44996, 1000.67f, 689.759f, 76.1922f, 3.1415f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000))
+                                        if (Creature* Smithers = player->SummonCreature(44997, 1002.7f, 695.775f, 76.1922f, 3.1415f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000))
+                                            if (Creature* Sophia = player->SummonCreature(45002, 1004.53f, 688.619f, 76.1922f, 3.1415f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000))
+                                            {
+                                                Timer = 9000;
+
+                                                Bloodfang->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, playerGUID);
+                                                Crowley->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, playerGUID);
+                                                Phin->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, playerGUID);
+                                                Bartolo->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, playerGUID);
+                                                Dibbs->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, playerGUID);
+                                                Maleb->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, playerGUID);
+                                                Smithers->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, playerGUID);
+                                                Sophia->SetSpecialInvisibility(SPECIAL_VISIBILITY_PLAYER, playerGUID);
+
+                                                BloodfangGUID = Bloodfang->GetGUID();
+                                                CrowleyGUID = Crowley->GetGUID();
+                                                PhinGUID = Phin->GetGUID();
+                                                BartoloGUID = Bartolo->GetGUID();
+                                                DibbsGUID = Dibbs->GetGUID();
+                                                MalebGUID = Maleb->GetGUID();
+                                                SmithersGUID = Smithers->GetGUID();
+                                                SophiaGUID = Sophia->GetGUID();
+                                                worgenysummoned = true;
+                                            }
+
+        }
+
+        void MovementInform(uint32 type, uint32 id) override
+        {
+            if (type == WAYPOINT_MOTION_TYPE && id == 2)
+            {
+                if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                {
+                    SummonWorgens();
+                }
+            }
+
+            if (type == WAYPOINT_MOTION_TYPE && id == 3)
+            {
+
+                if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                {
+                    player->ChangeSeat(1);
+                    if (Creature* Crowley = me->GetMap()->GetCreature(CrowleyGUID))
+                    {
+                        me->SetFacingToObject(Crowley);
+                    }
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!worgenysummoned)
+                return;
+
+            if (Timer <= diff)
+            {
+                switch (phase)
+                {
+                case 0:
+                {
+                    Timer = 3000;
+                    ++phase;
+                    break;
+                }
+                case 1:
+                {
+                    if (Creature* Crowley = me->GetMap()->GetCreature(CrowleyGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        {
+                            me->CastSpell(Crowley, 83768, false);
+                            player->CastSpell(Crowley, 83768, false);
+                            Crowley->AI()->Talk(0, player);
+                        }
+                    Timer = 5000;
+                    ++phase;
+                    break;
+                }
+                case 2:
+                {
+                    if (Creature* Crowley = me->GetMap()->GetCreature(CrowleyGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        {
+                            Crowley->AI()->Talk(1, player);
+                        }
+                    Timer = 2500;
+                    ++phase;
+                    break;
+                }
+                case 3:
+                {
+                    if (Creature* Crowley = me->GetMap()->GetCreature(CrowleyGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        {
+                            Crowley->AI()->Talk(2, player);
+                        }
+                    Timer = 4300;
+                    ++phase;
+                    break;
+                }
+                case 4:
+                {
+                    if (Creature* Crowley = me->GetMap()->GetCreature(CrowleyGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        {
+                            Crowley->AI()->Talk(3, player);
+                        }
+                    Timer = 5500;
+                    ++phase;
+                    break;
+                }
+                case 5:
+                {
+                    if (Creature* Crowley = me->GetMap()->GetCreature(CrowleyGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        {
+                            Crowley->AI()->Talk(4, player);
+                        }
+                    Timer = 6500;
+                    ++phase;
+                    break;
+                }
+                case 6:
+                {
+                    if (Creature* Crowley = me->GetMap()->GetCreature(CrowleyGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                            Crowley->AI()->Talk(5, player);
+                    Timer = 9000;
+                    ++phase;
+                    break;
+                }
+                case 7:
+                {
+                    if (Creature* Maleb = me->GetMap()->GetCreature(MalebGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        {
+                            me->CastSpell(Maleb, 84103, false);
+                            Maleb->AI()->Talk(0, player);
+                        }
+                    Timer = 9000;
+                    ++phase;
+                    break;
+                }
+                case 8:
+                {
+                    if (Creature* Maleb = me->GetMap()->GetCreature(MalebGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        {
+                            Maleb->AI()->Talk(1, player);
+                            Timer = 4000;
+                            ++phase;
+                            break;
+                        }
+                }
+                case 9:
+                {
+                    if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        if (Creature* Maleb = me->GetMap()->GetCreature(MalebGUID))
+                            if (Creature* Smithers = me->GetMap()->GetCreature(SmithersGUID))
+                                if (Creature* Dibbs = me->GetMap()->GetCreature(DibbsGUID))
+                                    if (Creature* Bartolo = me->GetMap()->GetCreature(BartoloGUID))
+                                        if (Creature* Sophia = me->GetMap()->GetCreature(SophiaGUID))
+                                            if (Creature* Phin = me->GetMap()->GetCreature(PhinGUID))
+                                            {
+                                                Smithers->CastSpell(Smithers, 84098, false);
+                                                Phin->CastSpell(Phin, 84094, false);
+                                                Sophia->CastSpell(Sophia, 84099, false);
+                                                Maleb->CastSpell(Maleb, 84097, false);
+                                                Bartolo->CastSpell(Bartolo, 84095, false);
+                                                Dibbs->CastSpell(Dibbs, 84096, false);
+                                                Timer = 4500;
+                                                ++phase;
+                                                break;
+                                            }
+                }
+                case 10:
+                {
+                    if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                    {
+                        player->ChangeSeat(0);
+                        player->KilledMonsterCredit(44951);
+                        for (Unit::ControlList::const_iterator itr = player->m_Controlled.begin(); itr != player->m_Controlled.end(); ++itr)
+                            if ((*itr) && (*itr)->GetTypeId() == TYPEID_UNIT && (*itr)->GetEntry() == 44951)
+                                (*itr)->ToCreature()->DespawnOrUnsummon(1);
+
+                        if (Creature* Arthura = player->SummonCreature(44951, player->GetPositionX() - 2.0f, player->GetPositionY(), player->GetPositionZ(), 0.0f, TEMPSUMMON_MANUAL_DESPAWN, 0))
+                            ArthuraGUID = Arthura->GetGUID();
+                    }
+                    Timer = 500;
+                    ++phase;
+                    break;
+                }
+                case 11:
+                {
+                    if (Creature* Arthura = me->GetMap()->GetCreature(ArthuraGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        {
+                            Arthura->AI()->Talk(3, player);
+                            // Still need to handle Agatha¡¯s flight part ¨C not yet finished.
+                            player->ExitVehicle();
+                            player->EnterVehicle(Arthura, 0);
+                            Arthura->DespawnOrUnsummon(1);
+
+                        }
+                    Timer = 1000;
+                    ++phase;
+                    break;
+                }
+                case 12:
+                {
+                    if (Creature* Arthura = me->GetMap()->GetCreature(ArthuraGUID))
+                        if (Player* player = me->GetMap()->GetPlayer(playerGUID))
+                        {
+                            Arthura->AI()->Talk(2, player);
+                            Arthura->SetSpeed(MOVE_FLIGHT, 2.0f);
+                            player->ExitVehicle();
+                            player->EnterVehicle(Arthura, 0);
+                            me->DespawnOrUnsummon(1);
+                            Timer = 1000;
+                            ++phase;
+                            break;
+                        }
+                }
+                default:
+                    break;
+                }
+
+            }
+            else
+                Timer -= diff;
+        }
+    };
+};
+
 /*######
 ## AddSC
 ######*/
@@ -2066,4 +2474,7 @@ void AddSC_silverpine_forest()
     new npc_armoire();
     new npc_deathstalker_rane_yorick();
     new gobj_abandoned_outhouse();
+    new npc_fenris_keep_camera();
+    new npc_fenris_keep_camera_bunny1();
+    new npc_fenris_keep_camera_bunny2();
 }
