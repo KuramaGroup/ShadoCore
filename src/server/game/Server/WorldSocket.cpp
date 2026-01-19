@@ -820,9 +820,9 @@ int WorldSocket::ProcessIncoming(WorldPacket* new_pct)
                 OpcodeHandler const* handler = clientOpcodeTable[opcode];
                 if (!handler || handler->Status == STATUS_UNHANDLED)
                 {
-                    TC_LOG_ERROR("network.opcode", "No defined handler for opcode %s sent by %u", GetRemoteAddress().c_str() ,GetOpcodeNameForLogging(new_pct->GetOpcode(), false, new_pct->GetReceivedOpcode()).c_str(), m_Session->GetAccountId());
+                    //TC_LOG_ERROR("network.opcode", "No defined handler for opcode %s sent by %u", GetRemoteAddress().c_str() ,GetOpcodeNameForLogging(new_pct->GetOpcode(), false, new_pct->GetReceivedOpcode()).c_str(), m_Session->GetAccountId());
                     if (m_Session->GetPlayer() && !handler && sWorld->getBoolConfig(CONFIG_DEBUG_OPCODES))
-                        ChatHandler(m_Session->GetPlayer()).PSendSysMessage("Ваш клиент отправил некий пакет %s. Если вы случайно обнаружили гарантированный способ повторения данной ошибки, сообщите об этом администрации сервера.", GetOpcodeNameForLogging(new_pct->GetOpcode(), false, new_pct->GetReceivedOpcode()).c_str());
+                        ChatHandler(m_Session->GetPlayer()).PSendSysMessage("Your client sent a packet %s. If you happen to find a reliable way to reproduce this error, please report it to the server administration.", GetOpcodeNameForLogging(new_pct->GetOpcode(), false, new_pct->GetReceivedOpcode()).c_str());
                     return 0;
                 }
 
