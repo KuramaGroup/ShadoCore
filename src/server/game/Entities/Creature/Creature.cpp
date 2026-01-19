@@ -625,7 +625,7 @@ void Creature::Update(uint32 diff)
             else
             {
                 m_noMeleeContactTimer += diff;
-                if (m_noMeleeContactTimer >= 8000)
+                if (m_noMeleeContactTimer >= 10000)
                 {
                     m_noMeleeContactTimer = 0;
                     AI()->EnterEvadeMode();
@@ -638,7 +638,7 @@ void Creature::Update(uint32 diff)
             else
             {
                 m_noDamageDealtTimer += diff;
-                if (m_noDamageDealtTimer >= 8000)
+                if (m_noDamageDealtTimer >= 10000)
                 {
                     m_noDamageDealtTimer = 0;
                     m_noMeleeContactTimer = 0;

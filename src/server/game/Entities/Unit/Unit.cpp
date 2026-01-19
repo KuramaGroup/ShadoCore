@@ -1115,7 +1115,11 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
     if (Creature* creature = ToCreature())
     {
         if (!creature->IsInCombat() && creature->IsAIEnabled)
-            creature->AI()->AttackStart(this);
+        {
+            creature->SetInCombatWith(victim);
+            victim->SetInCombatWith(creature);
+            creature->AI()->AttackStart(victim);
+        }
 
         if (damage > 0)
             creature->m_noDamageDealtTimer = 0;
