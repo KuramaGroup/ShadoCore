@@ -1112,19 +1112,6 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
 
     TC_LOG_DEBUG("entities.unit", "DealDamageEnd returned %d damage", damage);
 
-    if (Creature* creature = ToCreature())
-    {
-        if (!creature->IsInCombat() && creature->IsAIEnabled)
-        {
-            creature->SetInCombatWith(victim);
-            victim->SetInCombatWith(creature);
-            creature->AI()->AttackStart(victim);
-        }
-
-        if (damage > 0)
-            creature->m_noDamageDealtTimer = 0;
-    }
-
     return damage;
 }
 
@@ -8748,6 +8735,9 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
         if (playerPet && playerPet->IsAlive())
             playerPet->AI()->OwnerAttacked(victim);
     }
+
+    if(GetTypeId()== TYPEID_UNIT)
+        ToCreature()->m_noDamageDealtTimer = 0;
 
     return true;
 }
