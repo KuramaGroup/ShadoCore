@@ -8736,9 +8736,6 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
             playerPet->AI()->OwnerAttacked(victim);
     }
 
-    if(GetTypeId()== TYPEID_UNIT)
-        ToCreature()->m_noDamageDealtTimer = 0;
-
     return true;
 }
 
