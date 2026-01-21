@@ -804,7 +804,6 @@ class Creature : public Unit, public GridObject<Creature>, public MapObject
 
     public:
         void ForcedDespawn(uint32 timeMSToDespawn = 0);
-        uint32 m_noDamageDealtTimer;
     private:
         //WaypointMovementGenerator vars
         uint32 m_waypointID;
