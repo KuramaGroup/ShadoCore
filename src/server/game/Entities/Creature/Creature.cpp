@@ -169,6 +169,7 @@ m_creatureInfo(NULL), m_creatureData(NULL), m_path_id(0), m_formation(NULL), m_r
     TriggerJustRespawned = false;
     m_isTempWorldObject = false;
     _focusSpell = NULL;
+    m_noMeleeContactTimer = 0;
 }
 
 Creature::~Creature()
@@ -607,30 +608,37 @@ void Creature::Update(uint32 diff)
             break;
     }
 
-    if (IsAlive() && IsInCombat() && GetVictim() && !IsPet() && !IsSummon())
+    if (IsAlive())
     {
-        Map* map = GetMap();
-        if (map && !map->IsDungeon() && !map->IsRaid())
+        if (IsInCombat() && GetVictim() && !IsPet() && !IsSummon())
         {
-            bool canMelee = IsWithinMeleeRange(GetVictim());
-
-            bool isBusy = HasUnitState(UNIT_STATE_CASTING | UNIT_STATE_STUNNED |
-                UNIT_STATE_CONFUSED | UNIT_STATE_FLEEING |
-                UNIT_STATE_DISTRACTED | UNIT_STATE_ROOT);
-
-            if (canMelee || isBusy)
-                m_noMeleeContactTimer = 0;
-            else
+            Map* map = GetMap();
+            if (map && !map->IsDungeon() && !map->IsRaid())
             {
-                m_noMeleeContactTimer += diff;
-                if (m_noMeleeContactTimer >= 10000)
-                {
+                bool canMelee = IsWithinMeleeRange(GetVictim());
+
+                bool isBusy = HasUnitState(UNIT_STATE_CASTING | UNIT_STATE_STUNNED |
+                    UNIT_STATE_CONFUSED | UNIT_STATE_FLEEING |
+                    UNIT_STATE_DISTRACTED | UNIT_STATE_ROOT);
+
+                if (canMelee || isBusy)
                     m_noMeleeContactTimer = 0;
-                    AI()->EnterEvadeMode();
-                    return;
+                else
+                {
+                    m_noMeleeContactTimer += diff;
+                    if (m_noMeleeContactTimer >= 10000)
+                    {
+                        m_noMeleeContactTimer = 0;
+                        AI()->EnterEvadeMode();
+                        return;
+                    }
                 }
             }
+            else
+                m_noMeleeContactTimer = 0;
         }
+        else
+            m_noMeleeContactTimer = 0;
     }
 
     sScriptMgr->OnCreatureUpdate(this, diff);
