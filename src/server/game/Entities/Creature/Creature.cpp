@@ -612,15 +612,13 @@ void Creature::Update(uint32 diff)
         Map* map = GetMap();
         if (map && !map->IsDungeon() && !map->IsRaid())
         {
-            bool canMelee = IsWithinMeleeRange(GetVictim(), 0.0f);
+            bool canMelee = IsWithinMeleeRange(GetVictim());
 
             bool isBusy = HasUnitState(UNIT_STATE_CASTING | UNIT_STATE_STUNNED |
                 UNIT_STATE_CONFUSED | UNIT_STATE_FLEEING |
                 UNIT_STATE_DISTRACTED | UNIT_STATE_ROOT);
 
-            bool canSee = !canMelee && IsWithinDistInMap(GetVictim(), 40.0f) && IsWithinLOSInMap(GetVictim());
-
-            if (canMelee || isBusy || canSee)
+            if (canMelee || isBusy)
                 m_noMeleeContactTimer = 0;
             else
             {
