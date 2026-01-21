@@ -404,7 +404,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                     }
                     break;
                 case STATUS_AUTHED:
-                    TC_LOG_INFO("server.loading", "WorldSession::Update: STATUS_AUTHED");
                     // prevent cheating with skip queue wait
                     if (m_inQueue)
                     {
