@@ -930,7 +930,7 @@ int WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
         TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: World closed, denying client (%s).", GetRemoteAddress().c_str());
         return -1;
     }
-
+    TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: World open, denying client (%s).", GetRemoteAddress().c_str());
     // Get the account information from the realmd database
     //         0           1        2       3          4         5       6          7   8   9         10                    11
     // SELECT id, sessionkey, last_ip, locked, expansion, mutetime, locale, recruiter, os, flags, online_mute_timer, active_mute_id FROM account WHERE username = ?
@@ -947,7 +947,7 @@ int WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
         TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: Sent Auth Response (unknown account).");
         return -1;
     }
-
+    TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: Sent Auth Response.");
     Field* fields = result->Fetch();
 
     uint8 expansion = fields[4].GetUInt8();
@@ -967,7 +967,7 @@ int WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
             return -1;
         }
     }
-
+    TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: Sent Auth Response (Account IP differs).");
     id = fields[0].GetUInt32();
 
     k.SetHexStr(fields[1].GetCString());
@@ -988,7 +988,8 @@ int WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
         TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: Client %s attempted to log in using invalid client OS (%s).", GetRemoteAddress().c_str(), os.c_str());
         return -1;
     }
-
+    if (sWorld->getBoolConfig(CONFIG_WARDEN_ENABLED) && !os.empty())
+        TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: Client %s attempted to log in using invalid client OS (%s).", GetRemoteAddress().c_str(), os.c_str());
     // get boost info
     stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_ACCOUNT_BOOST);
     stmt->setUInt32(0, id);
@@ -1053,17 +1054,18 @@ int WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
         TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: Sent Auth Response (Account banned).");
         return -1;
     }
-
+    TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: Sent Auth Response (Account banned).");
     // Check locked state for server
     AccountTypes allowedAccountType = sWorld->GetPlayerSecurityLimit();
     TC_LOG_DEBUG("network", "Allowed Level: %u Player Level %u", allowedAccountType, AccountTypes(security));
+    TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: Allowed Level: %u Player Level %u", allowedAccountType, AccountTypes(security));
     if (allowedAccountType > SEC_PLAYER && AccountTypes(security) < allowedAccountType)
     {
         SendAuthResponseError(AUTH_UNAVAILABLE);
         TC_LOG_INFO("network", "WorldSocket::HandleAuthSession: User tries to login but his security level is not enough");
         return -1;
     }
-
+    TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: User tries to login but his security level is not enough");
     // Check that Key and account name are the same on client and server
     uint32 t = 0;
     uint32 seed = m_Seed;
@@ -1083,11 +1085,11 @@ int WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
         TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: Authentication failed for account: %u ('%s') address: %s", id, account.c_str(), address.c_str());
         return -1;
     }
-
+    TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: Authentication failed for account: %u ('%s') address: %s", id, account.c_str(), address.c_str());
     TC_LOG_DEBUG("network", "WorldSocket::HandleAuthSession: Client '%s' authenticated successfully from %s.",
         account.c_str(),
         address.c_str());
-
+    TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: Account '%s' authenticated successfully from %s.", account.c_str(), address.c_str());
     // Check if this user is by any chance a recruiter
     stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_ACCOUNT_RECRUITER);
 
@@ -1140,7 +1142,7 @@ int WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
     // Sleep this Network thread for
     uint32 sleepTime = sWorld->getIntConfig(CONFIG_SESSION_ADD_DELAY);
     ACE_OS::sleep(ACE_Time_Value(0, sleepTime));
-
+    TC_LOG_INFO("server.loading", "WorldSocket::HandleAuthSession: AddSession");
     sWorld->AddSession(m_Session);
     return 0;
 }
