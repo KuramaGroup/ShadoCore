@@ -769,7 +769,16 @@ int WorldSocket::ProcessIncoming(WorldPacket* new_pct)
         switch (opcode)
         {
             case CMSG_PING:
-                return HandlePing(*new_pct);
+                try
+                {
+                    return HandlePing(*new_pct);
+                }
+                catch (ByteBufferPositionException const&)
+                {
+
+                }
+                TC_LOG_ERROR("server", "WorldSocket::ReadDataHandler(): client sent malformed CMSG_PING");
+                return -1;
             case CMSG_AUTH_SESSION:
                 if (m_Session)
                 {
@@ -804,39 +813,7 @@ int WorldSocket::ProcessIncoming(WorldPacket* new_pct)
                 return m_Session ? m_Session->HandleEnableNagleAlgorithm() : -1;
             }*/
             default:
-            {
-                ACE_GUARD_RETURN(LockType, Guard, m_SessionLock, -1);
-                if (!m_Session)
-                {
-                    TC_LOG_ERROR("network.opcode", "ProcessIncoming: Client not authed opcode = %u (0x%X) from %s", uint32(opcode), uint32(opcode), GetRemoteAddress().c_str());
-                    CloseSocket();
-                    return -1;
-                }
-
-                // prevent invalid memory access/crash with custom opcodes
-                if (opcode >= NUM_OPCODES)
-                    return 0;
-
-                OpcodeHandler const* handler = clientOpcodeTable[opcode];
-                if (!handler || handler->Status == STATUS_UNHANDLED)
-                {
-                    //TC_LOG_ERROR("network.opcode", "No defined handler for opcode %s sent by %u", GetRemoteAddress().c_str() ,GetOpcodeNameForLogging(new_pct->GetOpcode(), false, new_pct->GetReceivedOpcode()).c_str(), m_Session->GetAccountId());
-                    if (m_Session->GetPlayer() && !handler && sWorld->getBoolConfig(CONFIG_DEBUG_OPCODES))
-                        ChatHandler(m_Session->GetPlayer()).PSendSysMessage("Your client sent a packet %s. If you happen to find a reliable way to reproduce this error, please report it to the server administration.", GetOpcodeNameForLogging(new_pct->GetOpcode(), false, new_pct->GetReceivedOpcode()).c_str());
-                    return 0;
-                }
-
-                // Our Idle timer will reset on any non PING opcodes.
-                // Catches people idling on the login screen and any lingering ingame connections.
-                m_Session->ResetTimeOutTime();
-
-                // OK, give the packet to WorldSession
-                aptr.release();
-                // WARNING here we call it with locks held.
-                // Its possible to cause deadlock if QueuePacket calls back
-                m_Session->QueuePacket(new_pct);
-                return 0;
-            }
+                break;
         }
     }
     catch (ByteBufferException &)
@@ -847,7 +824,37 @@ int WorldSocket::ProcessIncoming(WorldPacket* new_pct)
         return -1;
     }
 
-    ACE_NOTREACHED (return 0);
+    ACE_GUARD_RETURN(LockType, Guard, m_SessionLock, -1);
+    if (m_Session != nullptr)
+    {
+        // prevent invalid memory access/crash with custom opcodes
+        if (opcode >= NUM_OPCODES)
+            return 0;
+
+        OpcodeHandler const* handler = clientOpcodeTable[opcode];
+        if (!handler || handler->Status == STATUS_UNHANDLED)
+        {
+            TC_LOG_ERROR("network.opcode", "No defined handler for opcode %s sent by %u", GetOpcodeNameForLogging(new_pct->GetOpcode(), false, new_pct->GetReceivedOpcode()).c_str(), m_Session->GetAccountId());
+            if (m_Session->GetPlayer() && !handler && sWorld->getBoolConfig(CONFIG_DEBUG_OPCODES))
+                ChatHandler(m_Session->GetPlayer()).PSendSysMessage("Your client sent an unhandled packet %s. If you accidentally found a guaranteed way to repeat this error, please inform the server administration about it.", GetOpcodeNameForLogging(new_pct->GetOpcode(), false, new_pct->GetReceivedOpcode()).c_str());
+            return 0;
+        }
+
+        // Our Idle timer will reset on any non PING or TIME_SYNC opcodes.
+        // Catches people idling on the login screen and any lingering ingame connections.
+        if (opcode != CMSG_PING && opcode != CMSG_TIME_SYNC_RESP)
+        {
+            m_Session->ResetTimeOutTime();
+        }
+
+        // OK, give the packet to WorldSession
+        aptr.release();
+        m_Session->QueuePacket(new_pct);
+        return 0;
+    }
+
+    TC_LOG_ERROR("server", "WorldSocket::ProcessIncoming: Client not authed opcode = %u", uint32(opcode));
+    return -1;
 }
 
 int WorldSocket::HandleSendAuthSession()
