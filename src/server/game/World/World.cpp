@@ -315,7 +315,6 @@ void World::AddSession_(WorldSession* s)
         popu *= 2;
         TC_LOG_INFO("misc", "Server Population (%f).", popu);
     }
-    TC_LOG_INFO("server.loading", "World::AddSession_: Success %u", s->GetAccountId());
 }
 
 bool World::HasRecentlyDisconnected(WorldSession* session)

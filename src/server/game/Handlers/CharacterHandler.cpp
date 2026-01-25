@@ -361,7 +361,6 @@ void WorldSession::HandleCharEnumOpcode(WorldPacket & /*recvData*/)
     stmt->setUInt32(0, GetAccountId());
 
     _charEnumCallback = CharacterDatabase.AsyncQuery(stmt);
-    TC_LOG_INFO("server.loading", "WorldSession::HandleCharEnumOpcode: Login AccountID %u", GetAccountId());
 }
 
 void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
