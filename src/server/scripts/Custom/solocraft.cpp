@@ -441,10 +441,10 @@ class solocraft_system_announce : public PlayerScript
 
         void OnLogout(Player* player) override
         {
-            QueryResult result = CharacterDatabase.PQuery("SELECT `GUID` FROM `custom_solocraft_character_stats` WHERE GUID = %u", player->GetGUID());
+            QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `custom_solocraft_character_stats` WHERE guid = %u", player->GetGUIDLow());
             if (result)
             {
-                CharacterDatabase.PExecute("DELETE FROM custom_solocraft_character_stats WHERE GUID = %u", player->GetGUID());
+                CharacterDatabase.PExecute("DELETE FROM custom_solocraft_character_stats WHERE guid = %u", player->GetGUIDLow());
             }
         }
 
