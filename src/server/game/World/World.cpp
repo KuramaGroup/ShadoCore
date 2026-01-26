@@ -1376,6 +1376,7 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_LFG_SHORTAGE_CHECK_INTERVAL] = sConfigMgr->GetIntDefault("DungeonFinder.ShortageCheckInterval", 5);
     m_int_configs[CONFIG_LFG_SHORTAGE_PERCENT] = sConfigMgr->GetIntDefault("DungeonFinder.ShortagePercent", 50);
     m_int_configs[CONFIG_LFG_MAX_LFR_QUEUES] = sConfigMgr->GetIntDefault("DungeonFinder.MaxLfrQueues", 3);
+    m_bool_configs[CONFIG_LFG_SOLO] = sConfigMgr->GetBoolDefault("LFGSolo.Enabled", false);
 
     // DBC_ItemAttributes
     m_bool_configs[CONFIG_DBC_ENFORCE_ITEM_ATTRIBUTES] = sConfigMgr->GetBoolDefault("DBC.EnforceItemAttributes", true);
