@@ -4431,3 +4431,14 @@ Solocraft.ArgentTournamentRaidH25 = 25.0
 LFGSolo.Enabled = 1
 
 ################################################################################################
+#
+#    SpellQueueSystem.Enabled
+#        Enable or disable the ability to queue up spells while a cast is still ongoing.
+#        Default: 1 (Enabled)
+#
+#    SpellQueueSystem.GcdTime
+#        Description: Time (in milliseconds) for spells to be queued.
+#        Default:     400 - (400ms)
+
+SpellQueueSystem.Enabled = 1
+SpellQueueSystem.GcdTime = 400

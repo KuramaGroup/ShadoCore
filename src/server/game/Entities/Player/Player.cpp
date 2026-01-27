@@ -952,6 +952,7 @@ Player::Player(WorldSession* session) : Unit(true), phaseMgr(this), hasForcedMov
     transcendence_spirit = NULL;
 
     m_dynamicValuesCount = PLAYER_DYNAMIC_END;
+    ResetSpellQueue();
 }
 
 Player::~Player()
@@ -19884,6 +19885,38 @@ bool Player::IsAllowedToLoot(Creature const* creature)
     }
 
     return false;
+}
+
+void Player::QueueSpell(Spell* p_Spell)
+{
+    m_QueuedSpell = p_Spell;
+}
+
+void Player::ResetSpellQueue()
+{
+    m_QueuedSpell = nullptr;
+    m_Events.KillCustomEvents([=](BasicEvent* event)
+        {
+            if (auto spellEvent = dynamic_cast<SpellEvent*>(event))
+            {
+                return spellEvent->GetSpell() != GetCurrentSpell(CURRENT_GENERIC_SPELL)
+                    && spellEvent->GetSpell() != GetCurrentSpell(CURRENT_MELEE_SPELL)
+                    && spellEvent->GetSpell() != GetCurrentSpell(CURRENT_CHANNELED_SPELL)
+                    && spellEvent->IsQueuedSpellEvent();
+            }
+            else
+                return false;
+        });
+}
+
+bool Player::QueueSystemEnabled()
+{
+    return sWorld->getBoolConfig(WorldBoolConfigs::CONFIG_SPELL_QUEUE_STATE);
+}
+
+uint32 Player::GetQueueSpellTime()
+{
+    return sWorld->getIntConfig(WorldIntConfigs::CONFIG_SPELL_QUEUE_TIME);
 }
 
 void Player::_LoadActions(PreparedQueryResult result)

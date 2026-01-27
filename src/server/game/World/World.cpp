@@ -1564,6 +1564,9 @@ void World::LoadConfigSettings(bool reload)
 
     m_bool_configs[CONFIG_BOOST_PROMOTION] = sConfigMgr->GetBoolDefault("BoostPromotion.Enabled", false);
 
+    // SPELL QUEUE SYSTEM
+    m_bool_configs[CONFIG_SPELL_QUEUE_STATE] = sConfigMgr->GetBoolDefault("SpellQueueSystem.Enabled", true);
+    m_int_configs[CONFIG_SPELL_QUEUE_TIME] = sConfigMgr->GetIntDefault("SpellQueueSystem.GcdTime", 400);
     // call ScriptMgr if we're reloading the configuration
     if (reload)
     {

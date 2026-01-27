@@ -3305,6 +3305,16 @@ public:
 
     bool IsAllowedToLoot(Creature const* creature);
 
+    ///////////////////////////////////////////////////////
+    /// SPELL QUEUE SYSTEM
+    ///////////////////////////////////////////////////////
+
+    void QueueSpell(Spell* p_Spell);
+    void ResetSpellQueue();
+    static bool QueueSystemEnabled();
+    Spell* GetQueuedSpell() const { return m_QueuedSpell; }
+    static uint32 GetQueueSpellTime();
+
     // For internal use only
     bool CanRollForLootIn(WorldObject const* obj) const;
 
@@ -3935,6 +3945,7 @@ protected:
 
     bool m_forcedTeleportFar;
     bool m_forcedTeleportFarSemaphore = false;
+    Spell* m_QueuedSpell;
 
     // Temporary removed pet cache
     uint32 m_temporaryUnsummonedPetNumber;
