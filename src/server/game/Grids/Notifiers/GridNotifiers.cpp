@@ -146,12 +146,22 @@ inline void CreatureUnitRelocationWorker(Creature* c, Unit* u)
 
 void AIRelocationNotifier::Visit(CreatureMapType &m)
 {
-    for (CreatureMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
+    Creature* me = isCreature ? (Creature*)&i_unit : nullptr;
+
+    for (auto iter = m.begin(); iter != m.end(); ++iter)
     {
         Creature* c = iter->GetSource();
+
+        if (!c->IsWithinDist(&i_unit, 60.0f, false))
+            continue;
+
+        if (!c->IsInCombat() && !c->IsTrigger() &&
+            c->GetAIName().find("NullAI") != std::string::npos)
+            continue;
+
         CreatureUnitRelocationWorker(c, &i_unit);
-        if (isCreature)
-            CreatureUnitRelocationWorker((Creature*)&i_unit, c);
+        if (me)
+            CreatureUnitRelocationWorker(me, c);
     }
 }
 

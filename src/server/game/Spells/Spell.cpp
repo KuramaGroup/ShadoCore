@@ -1226,6 +1226,48 @@ void Spell::SelectImplicitAreaTargets(SpellEffIndex effIndex, SpellImplicitTarge
     }
     std::list<WorldObject*> targets;
     float radius = m_spellInfo->Effects[effIndex].CalcRadius(m_caster) * m_spellValue->RadiusMod;
+
+    if (radius > 50.0f)
+        radius = 50.0f;
+
+    if (m_spellInfo->HasAura(SPELL_AURA_PERIODIC_TRIGGER_SPELL) ||
+        m_spellInfo->HasAura(SPELL_AURA_PERIODIC_HEAL) ||
+        m_spellInfo->HasAura(SPELL_AURA_PERIODIC_DAMAGE))
+    {
+        struct CacheEntry
+        {
+            std::vector<uint64> guids;
+            uint32              lastUpdate = 0;
+        };
+
+        static thread_local std::unordered_map<uint32, CacheEntry> tlsCache;
+        uint32 now = getMSTime();
+        auto& entry = tlsCache[m_spellInfo->Id];
+
+        if (!entry.guids.empty() && getMSTimeDiff(entry.lastUpdate, now) < 500)
+        {
+            for (uint64 guid : entry.guids)
+                if (Unit* u = ObjectAccessor::GetUnit(*m_caster, guid))
+                    if (u->IsWithinDist(m_caster, radius))
+                        AddUnitTarget(u, effMask, false);
+            return;
+        }
+        entry.guids.clear();
+        entry.lastUpdate = now;
+
+        std::list<WorldObject*> targets;
+        SearchAreaTargets(targets, radius, center, referer, targetType,
+            m_spellInfo->Effects[effIndex].ImplicitTargetConditions);
+
+        for (WorldObject* o : targets)
+            if (Unit* u = o->ToUnit())
+            {
+                entry.guids.push_back(u->GetGUID());
+                AddUnitTarget(u, effMask, false);
+            }
+        return;
+    }
+
     SearchAreaTargets(targets, radius, center, referer, targetType, m_spellInfo->Effects[effIndex].ImplicitTargetConditions);
 
     // Custom entries
