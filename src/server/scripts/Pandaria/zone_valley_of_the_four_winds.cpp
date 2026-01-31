@@ -2279,6 +2279,237 @@ class spell_vfw_breaking_barrel : public AuraScript
     }
 };
 
+enum Quests
+{
+    QUEST_OH_SHEEPIE = 31340,
+    QUEST_LOST_SHEEPIE = 31338,
+    QUEST_LOST_SHEEPIE_AGAIN = 31339,
+    QUEST_HOP_HUNTING = 30053,
+    QUEST_WEED_WAR = 30052,
+    QUEST_WARN_STONEPLOW_A = 30360,
+    QUEST_WARN_STONEPLOW_H = 30241,
+    QUEST_CHEN_AND_LI_LI = 29907,
+
+};
+
+enum Npcs
+{
+    NPC_CHEN = 56133,
+    NPC_LI_LI = 56138,
+    NPC_CHEN_SUMMON = 56343,
+    NPC_LI_LI_SUMMON = 56344,
+    NPC_PENG = 56204,
+};
+
+class npc_li_li : public CreatureScript
+{
+    enum LiLi
+    {
+        EVENT_SAY_CHEN_20 = 1,
+        EVENT_SAY_LI_LI_12 = 2,
+        EVENT_RESET_CONVERSATION = 3,
+
+        SAY_LI_LI_11 = 11,
+        SAY_LI_LI_12 = 12,
+        SAY_CHEN_20 = 20
+    };
+public:
+    npc_li_li() : CreatureScript("npc_li_li")
+    {
+    }
+
+    struct npc_li_liAI : public ScriptedAI
+    {
+        npc_li_liAI(Creature* creature) : ScriptedAI(creature)
+        {
+            conversationStarted = false;
+        }
+
+        void MoveInLineOfSight(Unit* p_Who)
+        {
+            if (Player* l_Player = p_Who->ToPlayer())
+            {
+                if (me->GetDistance(l_Player) <= 10.0f && l_Player->GetQuestStatus(QUEST_CHEN_AND_LI_LI) == QUEST_STATUS_NONE && !conversationStarted)
+                {
+                    conversationStarted = true;
+                    Talk(SAY_LI_LI_11);
+                    events.ScheduleEvent(EVENT_SAY_CHEN_20, 6000);
+                    events.ScheduleEvent(EVENT_SAY_LI_LI_12, 14000);
+                    events.ScheduleEvent(EVENT_RESET_CONVERSATION, 40000);
+                }
+            }
+        }
+
+        void UpdateAI(const uint32 diff)
+        {
+            events.Update(diff);
+
+            while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                case EVENT_SAY_CHEN_20:
+                    if (Creature* chenStormstout = GetClosestCreatureWithEntry(me, NPC_CHEN, 50.0f, true))
+                    {
+                        chenStormstout->AI()->Talk(SAY_CHEN_20);
+                    }
+                    break;
+                case EVENT_SAY_LI_LI_12:
+                    Talk(SAY_LI_LI_12);
+                    break;
+                case EVENT_RESET_CONVERSATION:
+                    conversationStarted = false;
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+    private:
+        bool conversationStarted;
+        EventMap events;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new npc_li_liAI(creature);
+    }
+};
+
+class npc_chen_stormstout_summoned : public CreatureScript
+{
+    enum LiLi
+    {
+        EVENT_CHEN_MOVE_TO_POS = 1,
+        EVENT_LI_LI_MOVE_TO_POS = 2,
+        EVENT_CHEN_TALK_0 = 3,
+        EVENT_CHEN_TALK_1 = 4,
+        EVENT_PENG_TALK_0 = 5,
+        EVENT_CHEN_TALK_2 = 6,
+        EVENT_CHEN_MOVE_POS_2 = 7,
+        EVENT_LI_LI_TALK_1 = 8,
+        EVENT_RESET_CONVERSATION = 9,
+
+        SAY_LI_LI_0 = 0,
+        SAY_LI_LI_1 = 1,
+        SAY_CHEN_0 = 0,
+        SAY_CHEN_1 = 1,
+        SAY_CHEN_2 = 2,
+        SAY_CHEN_3 = 3,
+        SAY_PENG_0 = 0,
+
+        CHEN_MOVE_POINT = 0,
+        LI_LI_MOVE_POINT = 0,
+        CHEN_MOVE_POINT_2 = 1,
+    };
+public:
+    npc_chen_stormstout_summoned() : CreatureScript("npc_chen_stormstout_summoned")
+    {
+    }
+
+    struct npc_chen_stormstout_summonedAI : public ScriptedAI
+    {
+        npc_chen_stormstout_summonedAI(Creature* creature) : ScriptedAI(creature)
+        {
+            eventStarted = false;
+        }
+
+        void MoveInLineOfSight(Unit* p_Who)
+        {
+            if (Player* l_Player = p_Who->ToPlayer())
+            {
+                if (me->GetDistance(l_Player) <= 10.0f && l_Player->GetQuestStatus(QUEST_CHEN_AND_LI_LI) == QUEST_STATUS_INCOMPLETE && !eventStarted)
+                {
+                    eventStarted = true;
+                    events.ScheduleEvent(EVENT_CHEN_MOVE_TO_POS, 2000);
+                    events.ScheduleEvent(EVENT_LI_LI_MOVE_TO_POS, 2000);
+                    events.ScheduleEvent(EVENT_CHEN_TALK_0, 14000);
+                    events.ScheduleEvent(EVENT_CHEN_TALK_1, 20000);
+                    events.ScheduleEvent(EVENT_PENG_TALK_0, 28000);
+                    events.ScheduleEvent(EVENT_CHEN_TALK_2, 37000);
+                    events.ScheduleEvent(EVENT_CHEN_MOVE_POS_2, 44000);
+                    events.ScheduleEvent(EVENT_LI_LI_TALK_1, 47000);
+                    events.ScheduleEvent(EVENT_RESET_CONVERSATION, 53000);
+                }
+            }
+        }
+
+        void UpdateAI(const uint32 diff)
+        {
+            const Position chenstormstout1 = { 542.462f, -608.716f, 262.332f };
+            const Position lili1 = { 529.11f, -612.866f, 258.9f };
+            const Position chenstormstout2 = { 535.431f, -603.320f, 258.390f };
+            events.Update(diff);
+
+            while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                case EVENT_CHEN_MOVE_TO_POS:
+                    me->GetMotionMaster()->MovePoint(CHEN_MOVE_POINT, chenstormstout1);
+                    break;
+                case EVENT_LI_LI_MOVE_TO_POS:
+                    if (Creature* lilisummoned = GetClosestCreatureWithEntry(me, NPC_LI_LI_SUMMON, 100.0f))
+                    {
+                        lilisummoned->GetMotionMaster()->MovePoint(LI_LI_MOVE_POINT, lili1);
+                        lilisummoned->AI()->Talk(SAY_LI_LI_0);
+                    }
+                    break;
+                case EVENT_CHEN_TALK_0:
+                    Talk(SAY_CHEN_0);
+                    GetPlayerListInGrid(playerlist, me, 50.0f);
+
+                    for (auto&& itr : playerlist)
+                        itr->KilledMonsterCredit(56343);
+                    break;
+                case EVENT_CHEN_TALK_1:
+                    Talk(SAY_CHEN_1);
+                    break;
+                case EVENT_PENG_TALK_0:
+                    if (Creature* pengthunderfoot = GetClosestCreatureWithEntry(me, NPC_PENG, 50.0f))
+                    {
+                        pengthunderfoot->AI()->Talk(SAY_PENG_0);
+                    }
+                    break;
+                case EVENT_CHEN_TALK_2:
+                    Talk(SAY_CHEN_2);
+                    break;
+                case EVENT_CHEN_MOVE_POS_2:
+                    me->SetSpeed(MOVE_WALK, 1.0f);
+                    me->SetSpeed(MOVE_RUN, 1.0f);
+                    me->GetMotionMaster()->MovePoint(CHEN_MOVE_POINT_2, chenstormstout2);
+                    break;
+                case EVENT_LI_LI_TALK_1:
+                    if (Creature* lilisummoned = GetClosestCreatureWithEntry(me, NPC_LI_LI_SUMMON, 100.0f))
+                    {
+                        lilisummoned->AI()->Talk(SAY_LI_LI_1);
+                    }
+                    break;
+                case EVENT_RESET_CONVERSATION:
+                    me->DespawnOrUnsummon();
+                    if (Creature* lilisummoned = GetClosestCreatureWithEntry(me, NPC_LI_LI_SUMMON, 100.0f))
+                    {
+                        lilisummoned->DespawnOrUnsummon();
+                    }
+                    eventStarted = false;
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+    private:
+        bool eventStarted;
+        EventMap events;
+        std::list<Player*> playerlist;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new npc_chen_stormstout_summonedAI(creature);
+    }
+};
+
 void AddSC_valley_of_the_four_winds()
 {
     // Rare Mobs
@@ -2329,4 +2560,7 @@ void AddSC_valley_of_the_four_winds()
     new aura_script<spell_vfw_krungko_timer>("spell_vfw_krungko_timer");
     new atrigger_script<sat_vfw_ground_and_pound>("sat_vfw_ground_and_pound");
     new aura_script<spell_vfw_breaking_barrel>("spell_vfw_breaking_barrel");
+    //Zephyr
+    new npc_li_li();
+    new npc_chen_stormstout_summoned();
 }
