@@ -1,0 +1,1 @@
+UPDATE creature SET movementtype = 0, spawndist = 0 WHERE id = 66526;
